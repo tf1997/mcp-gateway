@@ -1,0 +1,103 @@
+{
+    "name": "",
+    "appCode": "",
+    "createdAt": "2025-08-09T00:00:00Z",
+    "updatedAt": "2025-08-09T00:00:00Z",
+    "deletedAt": "2025-08-09T00:00:00Z",
+    "router": {
+        "server": "",
+        "prefix": "",
+        "ssePrefix": "",
+        "cors": {
+            "allowOrigins": [],
+            "allowMethods": [],
+            "allowHeaders": [],
+            "exposeHeaders": [],
+            "allowCredentials": false
+        },
+        "auth": {
+            "mode": "token/Oauth2"
+        },
+        "consumers": [
+            {
+                "name": "cnsumer-1",
+                "description": "Consumer 1",
+                "token": "acess_token-1"
+            }
+        ]
+    },
+    "server": {
+        "name": "",
+        "description": "",
+        "allowedTools": [],
+        "config": {}
+    },
+    "tools": [
+        {
+            "name": "",
+            "description": "",
+            "method": "",
+            "endpoint": "",
+            "proxy": {
+                "host": "",
+                "port": 0,
+                "type": ""
+            },
+            "headers": {},
+            "args": [
+                {
+                    "name": "",
+                    "position": "",
+                    "required": false,
+                    "type": "",
+                    "description": "",
+                    "default": "",
+                    "items": {
+                        "type": "",
+                        "enum": [],
+                        "properties": {},
+                        "items": null,
+                        "required": []
+                    }
+                }
+            ],
+            "requestBody": "",
+            "responseBody": "",
+            "inputSchema": {}
+        }
+    ],
+    "prompts": [
+        {
+            "name": "",
+            "description": "",
+            "arguments": [
+                {
+                    "name": "",
+                    "description": "",
+                    "required": false
+                }
+            ],
+            "promptResponse": [
+                {
+                    "role": "",
+                    "content": {
+                        "type": "",
+                        "text": ""
+                    }
+                }
+            ]
+        }
+    ],
+    "mcpServers": [
+        {
+            "type": "",
+            "name": "",
+            "command": "",
+            "args": [],
+            "env": {},
+            "url": "",
+            "policy": "",
+            "preinstalled": false
+        }
+    ]
+}

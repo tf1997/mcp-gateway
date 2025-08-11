@@ -1,0 +1,108 @@
+port: ${MCP_GATEWAY_PORT:5235}
+pid: "${MCP_GATEWAY_PID:/var/run/mcp-gateway.pid}"
+reload_interval: ${MCP_GATEWAY_RELOAD_INTERVAL:600s}
+reload_switch: ${MCP_GATEWAY_RELOAD_SWITCH:true}
+
+# Logger configuration
+logger:
+  level: "${LOGGER_LEVEL:info}"                                           # debug, info, warn, error
+  format: "${LOGGER_FORMAT:json}"                                         # json, console
+  output: "${LOGGER_OUTPUT:stdout}"                                       # stdout, file
+  file_path: "${LOGGER_FILE_PATH:/var/log/unla/mcp-gateway.log}"          # path to log file when output is file
+  max_size: ${LOGGER_MAX_SIZE:100}                                        # max size of log file in MB
+  max_backups: ${LOGGER_MAX_BACKUPS:3}                                    # max number of backup files
+  max_age: ${LOGGER_MAX_AGE:7}                                            # max age of backup files in days
+  compress: ${LOGGER_COMPRESS:true}                                       # whether to compress backup files
+  color: ${LOGGER_COLOR:false}                                            # whether to use color in console output
+  stacktrace: ${LOGGER_STACKTRACE:true}                                   # whether to include stacktrace in error logs
+
+# Storage configuration
+storage:
+  type: "${GATEWAY_STORAGE_TYPE:db}"  # disk or db
+  # Database configuration (only used when type is db)
+  database:
+    type: "${GATEWAY_DB_TYPE:sqlite}"
+    host: "${GATEWAY_DB_HOST:localhost}"
+    port: ${GATEWAY_DB_PORT:5432}
+    user: "${GATEWAY_DB_USER:postgres}"
+    password: "${GATEWAY_DB_PASSWORD:example}"
+    dbname: "${GATEWAY_DB_NAME:./unla.db}"
+    sslmode: "${GATEWAY_DB_SSL_MODE:disable}"
+  # Disk configuration (only used when type is disk)
+  disk:
+    path: "${GATEWAY_STORAGE_DISK_PATH:}"
+  api:
+    url: "${GATEWAY_STORAGE_API_URL:}"
+    configJSONPath: "${GATEWAY_STORAGE_API_CONFIG_JSON_PATH:}"
+    timeout: "${GATEWAY_STORAGE_API_TIMEOUT:30s}"
+
+# Notifier configuration
+notifier:
+  role: "${NOTIFIER_ROLE:receiver}"
+  # Type of notifier to use (signal, api, redis, composite(includes signal n api as default))
+  type: "${NOTIFIER_TYPE:signal}"
+
+  # Signal configuration (only used when type is signal)
+  signal:
+    signal: "${NOTIFIER_SIGNAL:SIGHUP}"
+    pid: "${NOTIFIER_SIGNAL_PID:/var/run/mcp-gateway.pid}"
+
+  # API configuration (only used when type is api)
+  api:
+    port: ${NOTIFIER_API_PORT:5235}
+    target_url: "${NOTIFIER_API_TARGET_URL:http://localhost:5235/_reload}"
+
+  # Redis configuration (only used when type is redis)
+  redis:
+    cluster_type: "${NOTIFIER_REDIS_CLUSTER_TYPE:single}"
+    addr: "${NOTIFIER_REDIS_ADDR:localhost:6379}"
+    master_name: "${NOTIFIER_REDIS_MASTER_NAME:}" 	# MasterName is the sentinel master name.
+    username: "${NOTIFIER_REDIS_USERNAME:default}"
+    password: "${NOTIFIER_REDIS_PASSWORD:UseStrongPasswordIsAGoodPractice}"
+    db: ${NOTIFIER_REDIS_DB:0}
+    topic: "${NOTIFIER_REDIS_TOPIC:mcp-gateway:reload}"
+
+# Session storage configuration
+session:
+  type: "${SESSION_STORAGE_TYPE:memory}"  # memory or redis
+  redis:
+    cluster_type: "${SESSION_REDIS_CLUSTER_TYPE:single}"
+    addr: "${SESSION_REDIS_ADDR:localhost:6379}"
+    master_name: "${SESSION_REDIS_MASTER_NAME:}"  # MasterName is the sentinel master name.
+    username: "${SESSION_REDIS_USERNAME:default}"
+    password: "${SESSION_REDIS_PASSWORD:}"
+    db: ${SESSION_REDIS_DB:0}
+    topic: "${SESSION_REDIS_TOPIC:mcp-gateway:session}"
+    prefix: "${SESSION_REDIS_PREFIX:session}"
+    ttl: "${SESSION_REDIS_TTL:24h}"  # Session TTL in Redis
+
+# OAuth2 configuration
+auth:
+  oauth2:
+    issuer: "${OAUTH2_ISSUER:https://github.com/amoylab/unla}"
+    storage:
+      type: "${OAUTH2_STORAGE_TYPE:memory}"  # memory or redis
+      redis:
+        cluster_type: "${OAUTH2_REDIS_CLUSTER_TYPE:single}"
+        addr: "${OAUTH2_REDIS_ADDR:localhost:6379}"
+        master_name: "${OAUTH2_REDIS_MASTER_NAME:}"  # MasterName is the sentinel master name.
+        username: "${OAUTH2_REDIS_USERNAME:default}"
+        password: "${OAUTH2_REDIS_PASSWORD:}"
+        db: ${OAUTH2_REDIS_DB:0}
+  cors:
+    allowOrigins:
+      - "*"
+    allowMethods:
+      - "GET"
+      - "POST"
+      - "PUT"
+      - "OPTIONS"
+    allowHeaders:
+      - "Content-Type"
+      - "Authorization"
+      - "Mcp-Session-Id"
+      - "mcp-protocol-version"
+    exposeHeaders:
+      - "Mcp-Session-Id"
+      - "mcp-protocol-version"
+    allowCredentials: true

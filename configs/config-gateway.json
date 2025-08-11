@@ -1,0 +1,77 @@
+{
+    "/prefix/path": {
+        "protoType": "stdio/sse/streamable",
+        "router": {
+            "server": "",
+            "prefix": "",
+            "ssePrefix": "",
+            "cors": {
+                "allowOrigins": [],
+                "allowMethods": [],
+                "allowHeaders": [],
+                "exposeHeaders": [],
+                "allowCredentials": false
+            },
+            "auth": {
+                "mode": "token"
+            },
+            "consumers": {
+                "token-v1": {
+                    "name": "",
+                    "description": "",
+                    "token": ""
+                },
+                "token-v2": {
+                    "name": "",
+                    "description": "",
+                    "token": ""
+                }
+            }
+        },
+        "server": {
+            "name": "",
+            "description": "",
+            "allowedTools": [],
+            "config": {}
+        },
+        "mcpServer": {
+            "type": "",
+            "name": "",
+            "command": "",
+            "args": [],
+            "env": {},
+            "url": "",
+            "policy": "",
+            "preinstalled": false
+        },
+        "transport": null,
+        "tools": {
+            "toolName": {
+                "name": "",
+                "description": "",
+                "method": "",
+                "endpoint": "",
+                "proxy": {
+                    "host": "",
+                    "port": 0,
+                    "type": ""
+                },
+                "headers": {},
+                "args": [],
+                "requestBody": "",
+                "responseBody": "",
+                "inputSchema": {}
+            }
+        },
+        "toolSchemas": [],
+        "prompts": {
+            "promptName": {
+                "name": "",
+                "description": "",
+                "arguments": [],
+                "promptResponse": []
+            }
+        },
+        "promptSchemas": []
+    }
+}
