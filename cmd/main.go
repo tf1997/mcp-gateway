@@ -1,4 +1,4 @@
-package cmd
+package main
 
 import (
 	"context"
@@ -235,14 +235,14 @@ func run() {
 
 			if updateMCPConfig == nil {
 				logger.Warn("Updated configuration is nil, falling back to full reload")
-				server.ReloadConfigs(ctx)
+				// server.ReloadConfigs(ctx)
 			} else {
-				server.UpdateConfig(ctx, updateMCPConfig)
+				// server.UpdateConfig(ctx, updateMCPConfig)
 			}
 		case <-ticker.C:
 			logger.Info("Received ticker signal", zap.Bool("reload_switch", cfg.ReloadSwitch))
 			if cfg.ReloadSwitch {
-				server.ReloadConfigs(ctx)
+				// server.ReloadConfigs(ctx)
 			}
 		}
 

@@ -59,6 +59,43 @@ func NewState() *State {
 	}
 }
 
+func (r *runtimeUnit) GetProtoType() cnst.ProtoType {
+    return r.protoType
+}
+
+func (r *runtimeUnit) GetRouter() *config.RouterConfig {
+    return r.router
+}
+
+func (r *runtimeUnit) GetServer() *config.ServerConfig {
+    return r.server
+}
+
+func (r *runtimeUnit) GetMCPSserver() *config.MCPServerConfig {
+    return r.mcpServer
+}
+
+func (r *runtimeUnit) GetTransport() mcpproxy.Transport {
+    return r.transport
+}
+
+func (r *runtimeUnit) GetTools() map[toolName]*config.ToolConfig {
+    return r.tools
+}
+
+func (r *runtimeUnit) GetToolSchemas() []mcp.ToolSchema {
+    return r.toolSchemas
+}
+
+func (r *runtimeUnit) GetPrompts() map[promptName]*config.PromptConfig {
+    return r.prompts
+}
+
+func (r *runtimeUnit) GetPromptSchemas() []mcp.PromptSchema {
+    return r.promptSchemas
+}
+
+
 // BuildStateFromConfig creates a new State from the given configuration
 func BuildStateFromConfig(ctx context.Context, cfgs []*config.MCPConfig, oldState *State, logger *zap.Logger) (*State, error) {
 	// Create new state
@@ -233,6 +270,47 @@ func BuildStateFromConfig(ctx context.Context, cfgs []*config.MCPConfig, oldStat
 	}
 
 	return newState, nil
+}
+
+func (s *State) DeleteRuntimeByPrefixes(ctx context.Context, prefixes []string, logger *zap.Logger) {
+	for _, prefix := range prefixes {
+		if runtime, exists := s.runtime[uriPrefix(prefix)]; exists {
+			// If there's an MCP server running, stop it first
+			if runtime.mcpServer != nil && runtime.transport != nil {
+				logger.Info("stopping transport for prefix before deletion",
+					zap.String("prefix", prefix),
+					zap.String("command", runtime.mcpServer.Command))
+
+				if err := runtime.transport.Stop(ctx); err != nil {
+					logger.Warn("failed to stop transport while deleting prefix",
+						zap.String("prefix", prefix),
+						zap.Error(err))
+				}
+			}
+
+			// Delete the runtime entry
+			delete(s.runtime, uriPrefix(prefix))
+			logger.Info("deleted runtime configuration",
+				zap.String("prefix", prefix))
+		}
+	}
+}
+
+func (s *State) GetRouteStateMap() map[string]interface{} {
+	result := make(map[string]interface{})
+    for k, v := range s.runtime {
+        result[string(k)] = map[string]interface{}{
+            "protoType":    v.GetProtoType(),
+            "router":       v.GetRouter(),
+            "server":       v.GetServer(),
+            "mcpServer":    v.GetMCPSserver(),
+            "tools":        v.GetTools(),
+            "toolSchemas":  v.GetToolSchemas(),
+            "prompts":      v.GetPrompts(),
+            "promptSchemas": v.GetPromptSchemas(),
+        }
+    }
+    return result
 }
 
 func startMCPServer(ctx context.Context, logger *zap.Logger, prefix string, mcpServer config.MCPServerConfig,

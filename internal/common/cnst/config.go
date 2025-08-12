@@ -2,7 +2,7 @@ package cnst
 
 const (
 	ApiServerYaml  = "apiserver.yaml"
-	MCPGatewayYaml = "mcp-gateway.yaml"
+	MCPGatewayYaml = "/Users/tengfei.chu/Code/mcp-gateway/configs/mcp-gateway.yaml"
 )
 
 const (

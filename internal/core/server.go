@@ -85,6 +85,18 @@ func (s *Server) RegisterRoutes(ctx context.Context) error {
 		}
 	})
 
+	s.router.DELETE("/api/v1/configs", func(c *gin.Context) {
+		s.DeleteConfigFromHTTP(ctx, c)
+		if !c.IsAborted() {
+			c.JSON(http.StatusOK, gin.H{
+				"status":  "ok",
+				"message": "Configuration deleted successfully",
+			})
+		}
+	})
+
+	s.router.GET("/api/v1/configs", s.GetRouteState)
+
 	// Only register OAuth routes if OAuth2 is configured
 	if s.auth.IsOAuth2Enabled() {
 		// Create OAuth group with optional CORS middleware
@@ -448,4 +460,57 @@ func (s *Server) UpdateConfigFromHTTP(ctx context.Context, c *gin.Context) {
 
 	// Atomically replace the state
 	s.state = updatedState
+
+}
+
+func (s *Server) DeleteConfigFromHTTP(ctx context.Context, c *gin.Context) {
+	var prefixes []string
+	if err := c.BindJSON(&prefixes); err != nil {
+		s.logger.Error("failed to parse request body",
+			zap.Error(err))
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Invalid request body: " + err.Error(),
+		})
+		return
+	}
+
+	if len(prefixes) == 0 {
+		s.logger.Warn("empty prefixes list, nothing to delete")
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Prefixes list cannot be empty",
+		})
+		return
+	}
+
+	s.logger.Info("Deleting MCP configuration")
+
+	currentState := s.state
+	if currentState == nil {
+		// HTTP config，directly initialize the state
+		s.logger.Warn("current state is nil, nothing to delete")
+		return
+	}
+	// Remove configurations with the specified prefixes
+	currentState.DeleteRuntimeByPrefixes(ctx, prefixes, s.logger)
+
+	// Log the changes
+	s.logger.Info("Configuration deleted",
+		zap.Int("server_count", currentState.GetServerCount()),
+		zap.Int("tool_count", currentState.GetToolCount()),
+		zap.Int("router_count", currentState.GetRouterCount()))
+}
+
+func (s *Server) GetRouteState(c *gin.Context) {
+	if s.state == nil {
+		c.JSON(http.StatusOK, gin.H{
+			"error":  "Server state is not initialized",
+			"routes": map[string]interface{}{},
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"status": "ok",
+		"routes": s.state.GetRouteStateMap(),
+	})
 }
