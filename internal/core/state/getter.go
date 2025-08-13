@@ -8,13 +8,13 @@ import (
 )
 
 func (s *State) getRuntime(prefix string) runtimeUnit {
-	runtime, ok := s.runtime[uriPrefix(prefix)]
+	runtime, ok := s.Runtime[uriPrefix(prefix)]
 	if !ok {
 		return runtimeUnit{
-			tools:         make(map[toolName]*config.ToolConfig),
-			toolSchemas:   make([]mcp.ToolSchema, 0),
-			prompts:       make(map[promptName]*config.PromptConfig),
-			promptSchemas: make([]mcp.PromptSchema, 0),
+			Tools:         make(map[toolName]*config.ToolConfig),
+			ToolSchemas:   make([]mcp.ToolSchema, 0),
+			Prompts:       make(map[promptName]*config.PromptConfig),
+			PromptSchemas: make([]mcp.PromptSchema, 0),
 		}
 	}
 	return runtime
@@ -22,22 +22,22 @@ func (s *State) getRuntime(prefix string) runtimeUnit {
 
 func (s *State) setRouter(prefix string, router *config.RouterConfig) {
 	runtime := s.getRuntime(prefix)
-	runtime.router = router
-	s.runtime[uriPrefix(prefix)] = runtime
+	runtime.Router = router
+	s.Runtime[uriPrefix(prefix)] = runtime
 }
 
 func (s *State) GetCORS(prefix string) *config.CORSConfig {
-	runtime, ok := s.runtime[uriPrefix(prefix)]
-	if ok && runtime.router != nil {
-		return runtime.router.CORS
+	runtime, ok := s.Runtime[uriPrefix(prefix)]
+	if ok && runtime.Router != nil {
+		return runtime.Router.CORS
 	}
 	return nil
 }
 
 func (s *State) GetRouterCount() int {
 	count := 0
-	for _, runtime := range s.runtime {
-		if runtime.router != nil {
+	for _, runtime := range s.Runtime {
+		if runtime.Router != nil {
 			count++
 		}
 	}
@@ -45,17 +45,17 @@ func (s *State) GetRouterCount() int {
 }
 
 func (s *State) GetToolCount() int {
-	return s.metrics.totalTools
+	return s.Metrics.totalTools
 }
 
 func (s *State) GetMissingToolCount() int {
-	return s.metrics.missingTools
+	return s.Metrics.missingTools
 }
 
 func (s *State) GetServerCount() int {
 	count := 0
-	for _, runtime := range s.runtime {
-		if runtime.server != nil {
+	for _, runtime := range s.Runtime {
+		if runtime.Server != nil {
 			count++
 		}
 	}
@@ -63,87 +63,87 @@ func (s *State) GetServerCount() int {
 }
 
 func (s *State) GetTool(prefix, name string) *config.ToolConfig {
-	runtime, ok := s.runtime[uriPrefix(prefix)]
+	runtime, ok := s.Runtime[uriPrefix(prefix)]
 	if !ok {
 		return nil
 	}
-	return runtime.tools[toolName(name)]
+	return runtime.Tools[toolName(name)]
 }
 
 func (s *State) GetToolSchemas(prefix string) []mcp.ToolSchema {
-	runtime, ok := s.runtime[uriPrefix(prefix)]
+	runtime, ok := s.Runtime[uriPrefix(prefix)]
 	if !ok {
 		return nil
 	}
-	return runtime.toolSchemas
+	return runtime.ToolSchemas
 }
 
 func (s *State) GetServerConfig(prefix string) *config.ServerConfig {
-	runtime, ok := s.runtime[uriPrefix(prefix)]
+	runtime, ok := s.Runtime[uriPrefix(prefix)]
 	if !ok {
 		return nil
 	}
-	return runtime.server
+	return runtime.Server
 }
 
 func (s *State) GetProtoType(prefix string) cnst.ProtoType {
-	runtime, ok := s.runtime[uriPrefix(prefix)]
+	runtime, ok := s.Runtime[uriPrefix(prefix)]
 	if !ok {
 		return ""
 	}
-	return runtime.protoType
+	return runtime.ProtoType
 }
 
 func (s *State) GetTransport(prefix string) mcpproxy.Transport {
-	runtime, ok := s.runtime[uriPrefix(prefix)]
+	runtime, ok := s.Runtime[uriPrefix(prefix)]
 	if !ok {
 		return nil
 	}
-	return runtime.transport
+	return runtime.Transport
 }
 
 func (s *State) GetTransports() map[string]mcpproxy.Transport {
 	transports := make(map[string]mcpproxy.Transport)
-	for prefix, runtime := range s.runtime {
-		if runtime.transport != nil {
-			transports[string(prefix)] = runtime.transport
+	for prefix, runtime := range s.Runtime {
+		if runtime.Transport != nil {
+			transports[string(prefix)] = runtime.Transport
 		}
 	}
 	return transports
 }
 
 func (s *State) GetRawConfigs() []*config.MCPConfig {
-	return s.rawConfigs
+	return s.RawConfigs
 }
 
 func (s *State) GetAuth(prefix string) *config.Auth {
-	runtime, ok := s.runtime[uriPrefix(prefix)]
-	if !ok || runtime.router == nil {
+	runtime, ok := s.Runtime[uriPrefix(prefix)]
+	if !ok || runtime.Router == nil {
 		return nil
 	}
-	return runtime.router.Auth
+	return runtime.Router.Auth
 }
 
 func (s *State) GetSSEPrefix(prefix string) string {
-	runtime, ok := s.runtime[uriPrefix(prefix)]
-	if ok && runtime.router != nil {
-		return runtime.router.SSEPrefix
+	runtime, ok := s.Runtime[uriPrefix(prefix)]
+	if ok && runtime.Router != nil {
+		return runtime.Router.SSEPrefix
 	}
 	return ""
 }
 
 func (s *State) GetPrompt(prefix, name string) *config.PromptConfig {
-	runtime, ok := s.runtime[uriPrefix(prefix)]
+	runtime, ok := s.Runtime[uriPrefix(prefix)]
 	if !ok {
 		return nil
 	}
-	return runtime.prompts[promptName(name)]
+	return runtime.Prompts[promptName(name)]
 }
 
 func (s *State) GetPromptSchemas(prefix string) []mcp.PromptSchema {
-	runtime, ok := s.runtime[uriPrefix(prefix)]
+	runtime, ok := s.Runtime[uriPrefix(prefix)]
 	if !ok {
 		return nil
 	}
-	return runtime.promptSchemas
+	return runtime.PromptSchemas
 }

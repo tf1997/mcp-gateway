@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
 	"os/signal"
@@ -15,7 +14,6 @@ import (
 	"mcp-gateway/internal/core"
 	"mcp-gateway/internal/mcp/session"
 	"mcp-gateway/internal/mcp/storage"
-	"mcp-gateway/internal/mcp/storage/notifier"
 	pidHelper "mcp-gateway/pkg/helper"
 	"mcp-gateway/pkg/logger"
 	"mcp-gateway/pkg/utils"
@@ -59,53 +57,7 @@ var (
 			fmt.Println("Reload signal sent successfully")
 		},
 	}
-	testCmd = &cobra.Command{
-		Use:   "test",
-		Short: "Test the configuration of mcp-gateway",
-		Run: func(cmd *cobra.Command, args []string) {
-			// Load config
-			cfg, _, err := config.LoadConfig[config.MCPGatewayConfig](configPath)
-			if err != nil {
-				fmt.Printf("Failed to load config: %v\n", err)
-				os.Exit(1)
-			}
-
-			// Initialize logger
-			logger, err := logger.NewLogger(&cfg.Logger)
-			if err != nil {
-				fmt.Printf("Failed to initialize logger: %v\n", err)
-				os.Exit(1)
-			}
-			defer logger.Sync()
-
-			// Initialize storage
-			store, err := storage.NewStore(logger, &cfg.Storage)
-			if err != nil {
-				fmt.Printf("Failed to initialize storage: %v\n", err)
-				os.Exit(1)
-			}
-
-			// Load all MCP configurations
-			cfgs, err := store.List(context.Background())
-			if err != nil {
-				fmt.Printf("Failed to load MCP configurations: %v\n", err)
-				os.Exit(1)
-			}
-
-			// Validate configurations
-			if err := config.ValidateMCPConfigs(cfgs); err != nil {
-				var validationErr *config.ValidationError
-				if errors.As(err, &validationErr) {
-					fmt.Printf("Configuration validation failed: %v\n", validationErr)
-				} else {
-					fmt.Printf("Failed to validate configurations: %v\n", err)
-				}
-				os.Exit(1)
-			}
-
-			fmt.Println("Configuration test is successful")
-		},
-	}
+	
 	rootCmd = &cobra.Command{
 		Use:   cnst.CommandName,
 		Short: "MCP Gateway service",
@@ -121,7 +73,6 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&pidFile, "pid", "", "path to PID file")
 	rootCmd.AddCommand(versionCmd)
 	rootCmd.AddCommand(reloadCmd)
-	rootCmd.AddCommand(testCmd)
 }
 
 func run() {
@@ -143,18 +94,18 @@ func run() {
 	logger.Info("Loaded configuration", zap.String("path", cfgPath))
 
 	// Initialize PID manager
-	if pidFile == "" {
-		pidFile = cfg.PID
-	}
+	// if pidFile == "" {
+	// 	pidFile = cfg.PID
+	// }
 
-	pidManager := utils.NewPIDManagerFromConfig(pidFile)
-	err = pidManager.WritePID()
-	if err != nil {
-		logger.Fatal("Failed to write PID file",
-			zap.String("path", pidManager.GetPIDFile()),
-			zap.Error(err))
-	}
-	defer pidManager.RemovePID()
+	// pidManager := utils.NewPIDManagerFromConfig(pidFile)
+	// err = pidManager.WritePID()
+	// if err != nil {
+	// 	logger.Fatal("Failed to write PID file",
+	// 		zap.String("path", pidManager.GetPIDFile()),
+	// 		zap.Error(err))
+	// }
+	// defer pidManager.RemovePID()
 
 	logger.Info("Starting mcp-gateway", zap.String("version", version.Get()))
 
@@ -192,23 +143,23 @@ func run() {
 			zap.Error(err))
 	}
 
-	ntf, err := notifier.NewNotifier(ctx, logger, &cfg.Notifier)
-	if err != nil {
-		logger.Fatal("failed to initialize notifier",
-			zap.Error(err))
-	}
-	updateCh, err := ntf.Watch(ctx)
-	if err != nil {
-		logger.Fatal("failed to start watching for updates",
-			zap.Error(err))
-	}
+	// ntf, err := notifier.NewNotifier(ctx, logger, &cfg.Notifier)
+	// if err != nil {
+	// 	logger.Fatal("failed to initialize notifier",
+	// 		zap.Error(err))
+	// }
+	// updateCh, err := ntf.Watch(ctx)
+	// if err != nil {
+	// 	logger.Fatal("failed to start watching for updates",
+	// 		zap.Error(err))
+	// }
 
 	server.Start()
 
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 
-	// periodically reload the configuration as a fallback mechanism for the notifier
+	//periodically save the configuration as a fallback mechanism for the notifier
 	ticker := time.NewTicker(cfg.ReloadInterval)
 	defer ticker.Stop()
 
@@ -230,19 +181,10 @@ func run() {
 			}
 
 			return
-		case updateMCPConfig := <-updateCh:
-			logger.Info("Received update signal")
-
-			if updateMCPConfig == nil {
-				logger.Warn("Updated configuration is nil, falling back to full reload")
-				// server.ReloadConfigs(ctx)
-			} else {
-				// server.UpdateConfig(ctx, updateMCPConfig)
-			}
 		case <-ticker.C:
 			logger.Info("Received ticker signal", zap.Bool("reload_switch", cfg.ReloadSwitch))
 			if cfg.ReloadSwitch {
-				// server.ReloadConfigs(ctx)
+				server.SaveState(ctx)
 			}
 		}
 

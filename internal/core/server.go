@@ -117,6 +117,13 @@ func (s *Server) RegisterRoutes(ctx context.Context) error {
 		oauthGroup.POST("/revoke", s.handleOAuthRevoke)
 	}
 
+	loadedState, err := s.store.LoadState(ctx)
+	if err != nil {
+		fmt.Printf("Failed to load state: %v\n", err)
+	} else {
+		fmt.Printf("State loaded successfully: %+v\n", loadedState)
+		s.state = loadedState
+	}
 	// newState, err := s.updateConfigs(ctx)
 	// if err != nil {
 	// 	s.logger.Error("invalid configuration during route registration",
@@ -256,139 +263,6 @@ func (s *Server) Shutdown(_ context.Context) error {
 	return nil
 }
 
-func (s *Server) updateConfigs(ctx context.Context) (*state.State, error) {
-	s.logger.Info("Updating MCP configuration")
-	var (
-		cfgs []*config.MCPConfig
-		err  error
-		now  = time.Now()
-	)
-
-	if s.lastUpdateTime.IsZero() {
-		cfgs, err = s.store.List(ctx)
-		if err != nil {
-			s.logger.Error("Failed to load MCP configurations",
-				zap.Error(err))
-			return nil, err
-		}
-		s.logger.Info("loading all MCP configurations",
-			zap.Int("count", len(cfgs)))
-	} else {
-		updatedCfgs, err := s.store.ListUpdated(ctx, s.lastUpdateTime)
-		if err != nil {
-			s.logger.Error("Failed to load MCP configurations",
-				zap.Error(err))
-			return nil, err
-		}
-		if len(updatedCfgs) == 0 {
-			s.logger.Info("no updated MCP configurations found, skipping update")
-			return s.state, nil
-		}
-		s.logger.Info("getting updated MCP configurations",
-			zap.Int("count", len(updatedCfgs)))
-		cfgs = s.state.GetRawConfigs()
-		for _, cfg := range updatedCfgs {
-			cfgs = config.MergeConfigs(cfgs, cfg)
-		}
-		s.logger.Info("merging updated MCP configurations",
-			zap.Int("total_old", len(s.state.GetRawConfigs())),
-			zap.Int("total_new", len(cfgs)))
-	}
-
-	// Validate configurations before merging
-	err = config.ValidateMCPConfigs(cfgs)
-	if err != nil {
-		var validationErr *config.ValidationError
-		if errors.As(err, &validationErr) {
-			s.logger.Error("Configuration validation failed",
-				zap.String("error", validationErr.Error()))
-		} else {
-			s.logger.Error("failed to validate configurations",
-				zap.Error(err))
-		}
-		return nil, err
-	}
-
-	s.logger.Info("initializing server state")
-	newState, err := state.BuildStateFromConfig(ctx, cfgs, s.state, s.logger)
-	if err != nil {
-		s.logger.Error("failed to initialize server state",
-			zap.Error(err))
-		return nil, err
-	}
-
-	s.logger.Info("server configuration loaded",
-		zap.Int("server_count", newState.GetServerCount()),
-		zap.Int("tool_count", newState.GetToolCount()),
-		zap.Int("router_count", newState.GetRouterCount()))
-
-	s.lastUpdateTime = now
-	return newState, nil
-}
-
-func (s *Server) ReloadConfigs(ctx context.Context) {
-	s.logger.Info("Reloading MCP configuration")
-
-	newState, err := s.updateConfigs(ctx)
-	if err != nil {
-		s.logger.Error("failed to reload configuration",
-			zap.Error(err))
-		return
-	}
-	if newState == nil {
-		return
-	}
-	// Atomically replace the state
-	s.state = newState
-
-	s.logger.Info("Configuration reloaded successfully")
-}
-
-func (s *Server) UpdateConfig(ctx context.Context, cfg *config.MCPConfig) {
-	s.logger.Info("Updating MCP configuration", zap.String("name", cfg.Name))
-
-	// Validate the new configuration
-	if err := config.ValidateMCPConfig(cfg); err != nil {
-		var validationErr *config.ValidationError
-		if errors.As(err, &validationErr) {
-			s.logger.Error("Configuration validation failed",
-				zap.String("error", validationErr.Error()))
-		} else {
-			s.logger.Error("failed to validate configuration",
-				zap.Error(err))
-		}
-		return
-	}
-
-	// Get current state
-	currentState := s.state
-	if currentState == nil {
-		s.logger.Warn("current state is nil, triggering reload")
-		s.ReloadConfigs(ctx)
-		return
-	}
-
-	// Merge the new configuration with existing configs
-	cfgs := config.MergeConfigs(currentState.GetRawConfigs(), cfg)
-
-	// Build new state from updated configs
-	updatedState, err := state.BuildStateFromConfig(ctx, cfgs, currentState, s.logger)
-	if err != nil {
-		s.logger.Error("failed to build state from updated configs",
-			zap.Error(err))
-		return
-	}
-
-	// Log the changes
-	s.logger.Info("Configuration updated",
-		zap.Int("server_count", updatedState.GetServerCount()),
-		zap.Int("tool_count", updatedState.GetToolCount()),
-		zap.Int("router_count", updatedState.GetRouterCount()))
-
-	// Atomically replace the state
-	s.state = updatedState
-}
-
 func (s *Server) UpdateConfigFromHTTP(ctx context.Context, c *gin.Context) {
 	var configs []*config.MCPConfig
 	if err := c.BindJSON(&configs); err != nil {
@@ -513,4 +387,13 @@ func (s *Server) GetRouteState(c *gin.Context) {
 		"status": "ok",
 		"routes": s.state.GetRouteStateMap(),
 	})
+}
+
+func (s *Server) SaveState(ctx context.Context) {
+	err := s.store.SaveState(ctx, s.state)
+	if err != nil {
+		fmt.Printf("Failed to save state: %v\n", err)
+	} else {
+		fmt.Println("State saved successfully!")
+	}
 }

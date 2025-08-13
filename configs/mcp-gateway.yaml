@@ -1,6 +1,6 @@
 port: ${MCP_GATEWAY_PORT:5235}
 pid: "${MCP_GATEWAY_PID:./mcp-gateway.pid}"
-reload_interval: ${MCP_GATEWAY_RELOAD_INTERVAL:600s}
+reload_interval: ${MCP_GATEWAY_RELOAD_INTERVAL:10s}
 reload_switch: ${MCP_GATEWAY_RELOAD_SWITCH:true}
 
 # Logger configuration
@@ -18,7 +18,7 @@ logger:
 
 # Storage configuration
 storage:
-  type: "${GATEWAY_STORAGE_TYPE:db}"  # disk or db
+  type: "${GATEWAY_STORAGE_TYPE:disk}"  # disk or db
   # Database configuration (only used when type is db)
   database:
     type: "${GATEWAY_DB_TYPE:sqlite}"
