@@ -1,6 +1,7 @@
 package core
 
 import (
+	"slices"
 	"context"
 	"errors"
 	"fmt"
@@ -124,21 +125,6 @@ func (s *Server) RegisterRoutes(ctx context.Context) error {
 		fmt.Printf("State loaded successfully: %+v\n", loadedState)
 		s.state = loadedState
 	}
-	// newState, err := s.updateConfigs(ctx)
-	// if err != nil {
-	// 	s.logger.Error("invalid configuration during route registration",
-	// 		zap.Error(err))
-	// 	return fmt.Errorf("invalid configuration: %w", err)
-	// }
-
-	// if newState == nil {
-	// 	return nil
-	// }
-
-	// // Atomically replace the state
-	// s.state = newState
-
-	// Register all routes under root path
 	s.logger.Debug("registering root handler")
 	s.router.NoRoute(s.handleRoot)
 
@@ -165,6 +151,48 @@ func (s *Server) handleRoot(c *gin.Context) {
 		zap.String("prefix", prefix),
 		zap.String("endpoint", endpoint),
 		zap.String("remote_addr", c.Request.RemoteAddr))
+
+	// Get runtime unit for the prefix
+	runtimeUnit := s.state.GetRuntime(prefix)
+	if runtimeUnit == nil {
+		s.logger.Warn("invalid prefix, runtime unit not found",
+			zap.String("prefix", prefix),
+			zap.String("remote_addr", c.Request.RemoteAddr))
+		s.sendProtocolError(c, nil, "Invalid prefix", http.StatusNotFound, mcp.ErrorCodeInvalidRequest)
+		return
+	}
+
+	// Consumer Token Validation
+	if runtimeUnit.Router != nil { // Check if ConsumerTokens field exists
+		if runtimeUnit.Router.ConsumerTokens != nil || len(runtimeUnit.Router.ConsumerTokens) == 0 {
+			// If the list is empty, it means no consumer is allowed
+			s.logger.Warn("consumer tokens list is empty, denying access",
+				zap.String("prefix", prefix),
+				zap.String("remote_addr", c.Request.RemoteAddr))
+			s.sendProtocolError(c, nil, "No consumer tokens allowed for this route", http.StatusForbidden, mcp.ErrorCodeUnauthorized)
+			return
+		}
+
+		consumerToken := c.GetHeader("X-Consumer-Token")
+		if consumerToken == "" {
+			s.logger.Warn("consumer token missing",
+				zap.String("prefix", prefix),
+				zap.String("remote_addr", c.Request.RemoteAddr))
+			s.sendProtocolError(c, nil, "Consumer token missing", http.StatusForbidden, mcp.ErrorCodeUnauthorized)
+			return
+		}
+
+		found := slices.Contains(runtimeUnit.Router.ConsumerTokens, consumerToken)
+
+		if !found {
+			s.logger.Warn("invalid consumer token",
+				zap.String("prefix", prefix),
+				zap.String("consumer_token", consumerToken),
+				zap.String("remote_addr", c.Request.RemoteAddr))
+			s.sendProtocolError(c, nil, "Invalid consumer token", http.StatusForbidden, mcp.ErrorCodeUnauthorized)
+			return
+		}
+	}
 
 	// Check auth configuration
 	auth := s.state.GetAuth(prefix)

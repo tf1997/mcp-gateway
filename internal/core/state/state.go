@@ -28,15 +28,16 @@ type (
 	}
 
 	runtimeUnit struct {
-		ProtoType     cnst.ProtoType                      `json:"protoType"`
-		Router        *config.RouterConfig                `json:"router"`
-		Server        *config.ServerConfig                `json:"server"`
-		McpServer     *config.MCPServerConfig             `json:"mcpServer"`
-		Transport     mcpproxy.Transport                  `json:"-"`
-		Tools         map[toolName]*config.ToolConfig     `json:"tools"`
-		ToolSchemas   []mcp.ToolSchema                    `json:"toolSchemas"`
-		Prompts       map[promptName]*config.PromptConfig `json:"prompts"`
-		PromptSchemas []mcp.PromptSchema                  `json:"promptSchemas"`
+		ProtoType      cnst.ProtoType                      `json:"protoType"`
+		Router         *config.RouterConfig                `json:"router"`
+		Server         *config.ServerConfig                `json:"server"`
+		McpServer      *config.MCPServerConfig             `json:"mcpServer"`
+		Transport      mcpproxy.Transport                  `json:"-"`
+		Tools          map[toolName]*config.ToolConfig     `json:"tools"`
+		ToolSchemas    []mcp.ToolSchema                    `json:"toolSchemas"`
+		Prompts        map[promptName]*config.PromptConfig `json:"prompts"`
+		PromptSchemas  []mcp.PromptSchema                  `json:"promptSchemas"`
+		ConsumerTokens []string                            `json:"consumerTokens,omitempty"`
 	}
 
 	metrics struct {
@@ -91,6 +92,15 @@ func (r *runtimeUnit) GetPrompts() map[promptName]*config.PromptConfig {
 
 func (r *runtimeUnit) GetPromptSchemas() []mcp.PromptSchema {
 	return r.PromptSchemas
+}
+
+// GetRuntime returns the runtimeUnit for a given prefix
+func (s *State) GetRuntime(prefix string) *runtimeUnit {
+	unit, ok := s.Runtime[uriPrefix(prefix)]
+	if !ok {
+		return nil
+	}
+	return &unit
 }
 
 // BuildStateFromConfig creates a new State from the given configuration

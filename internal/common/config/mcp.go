@@ -32,11 +32,12 @@ type (
 	}
 
 	RouterConfig struct {
-		Server    string      `json:"server" yaml:"server"`
-		Prefix    string      `json:"prefix" yaml:"prefix"`
-		SSEPrefix string      `json:"ssePrefix" yaml:"ssePrefix"`
-		CORS      *CORSConfig `json:"cors,omitempty" yaml:"cors,omitempty"`
-		Auth      *Auth       `json:"auth,omitempty" yaml:"auth,omitempty"`
+		Server         string      `json:"server" yaml:"server"`
+		Prefix         string      `json:"prefix" yaml:"prefix"`
+		SSEPrefix      string      `json:"ssePrefix" yaml:"ssePrefix"`
+		CORS           *CORSConfig `json:"cors,omitempty" yaml:"cors,omitempty"`
+		Auth           *Auth       `json:"auth,omitempty" yaml:"auth,omitempty"`
+		ConsumerTokens []string    `json:"consumerTokens,omitempty" yaml:"consumerTokens,omitempty"`
 	}
 
 	CORSConfig struct {
