@@ -24,7 +24,7 @@ jobs:
         cache: true
 
     - name: Build
-      run: go build -v ./...
+      run: go build -v -o main ./cmd/main.go
 
     - name: Test
       run: go test -v ./...
