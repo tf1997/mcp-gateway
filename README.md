@@ -5,7 +5,7 @@ Welcome to the **MCP Gateway** project! This repository hosts a robust and effic
 ## ✨ Features
 
 *   **Secure Authentication**: Integrates with OAuth2 and JWT for secure access control. 🔐
-*   **Flexible Configuration**: Easily configurable via YAML and JSON files. ⚙️
+*   **Flexible Configuration**: Easily configurable via YAML. ⚙️
 *   **State Management**: Persistent state handling for reliable operations. 💾
 *   **Internationalization (i18n)**: Supports multiple languages for broader accessibility. 🌍
 *   **MCP Proxy**: Handles MCP-specific protocols and interactions. 🤝
@@ -52,7 +52,7 @@ The MCP Gateway exposes a configuration API at `http://127.0.0.1:5235/api/v1/con
 curl -X POST \
   'http://127.0.0.1:5235/api/v1/configs' \
   --header 'Accept: */*' \
-  --header 'User-Agent: Thunder Client (https://www.thunderclient.com)' \
+  --header 'User-Agent: HTTP Client' \
   --header 'Content-Type: application/json' \
   --data-raw '[
   {
@@ -125,7 +125,7 @@ curl -X POST \
 curl -X GET \
   'http://127.0.0.1:5235/api/v1/configs' \
   --header 'Accept: */*' \
-  --header 'User-Agent: Thunder Client (https://www.thunderclient.com)'
+  --header 'User-Agent: HTTP Client'
 ```
 
 ### Delete Configuration (DELETE)
@@ -134,10 +134,10 @@ curl -X GET \
 curl -X DELETE \
   'http://127.0.0.1:5235/api/v1/configs' \
   --header 'Accept: */*' \
-  --header 'User-Agent: Thunder Client (https://www.thunderclient.com)' \
+  --header 'User-Agent: HTTP Client' \
   --header 'Content-Type: application/json' \
   --data-raw '[
-  "/gateway/wms"
+  "/gateway/baidu"
 ]'
 ```
 
@@ -146,7 +146,7 @@ Contributions are welcome! Please feel free to open issues or submit pull reques
 
 ## 📄 License
 
-This project is licensed under the MIT License. See the `LICENSE` file for more details. (Note: A `LICENSE` file is not currently in the repo, but it's good practice to mention it.)
+This project is licensed under the MIT License. See the `LICENSE` file for more details.
 
 ---
 Made with ❤️ by the MCP Gateway Team
