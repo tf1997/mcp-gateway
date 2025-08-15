@@ -74,7 +74,7 @@ func (c *Converter) Convert(specData []byte) (*config.MCPConfig, error) {
 	// Create base MCP configuration
 	mcpConfig := &config.MCPConfig{
 		Name:      doc.Info.Title + "_" + rs,
-		Tenant:    "default", // Default tenant prefix
+		AppCode:   "default", // Default tenant prefix
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 		Routers:   make([]config.RouterConfig, 0),
@@ -342,19 +342,19 @@ func (c *Converter) ConvertWithOptions(specData []byte, tenant, prefix string) (
 		cleanTenant = strings.TrimPrefix(cleanTenant, "/")
 	}
 	if tenant != "" && prefix != "" {
-		config.Tenant = cleanTenant
+		config.AppCode = cleanTenant
 		if len(config.Routers) > 0 {
 			config.Routers[0].Prefix = cleanTenant + "/" + prefix
 		}
 	} else if tenant != "" {
-		config.Tenant = cleanTenant
+		config.AppCode = cleanTenant
 		if len(config.Routers) > 0 {
 			// Autogenerate prefix as in default logic
 			rs := lol.RandomString(4)
 			config.Routers[0].Prefix = cleanTenant + "/" + rs
 		}
 	} else if prefix != "" {
-		config.Tenant = "default"
+		config.AppCode = "default"
 		if len(config.Routers) > 0 {
 			config.Routers[0].Prefix = "/default/" + prefix
 		}

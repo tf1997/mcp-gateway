@@ -133,7 +133,7 @@ type PromptResponseContent struct {
 func FromConfig(cfg *config.MCPConfig) MCPServer {
 	return MCPServer{
 		Name:       cfg.Name,
-		Tenant:     cfg.Tenant,
+		Tenant:     cfg.AppCode,
 		McpServers: FromMCPServerConfigs(cfg.McpServers),
 		Tools:      FromToolConfigs(cfg.Tools),
 		Prompts:    FromPromptConfigs(cfg.Prompts),

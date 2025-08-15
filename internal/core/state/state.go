@@ -124,7 +124,7 @@ func BuildStateFromConfig(ctx context.Context, cfgs []*config.MCPConfig, oldStat
 			prefixMap[router.Server] = append(prefixMap[router.Server], router.Prefix)
 			newState.setRouter(router.Prefix, &router)
 			logger.Info("registered router",
-				zap.String("tenant", cfg.Tenant),
+				zap.String("tenant", cfg.AppCode),
 				zap.String("prefix", router.Prefix),
 				zap.String("server", router.Server))
 		}
@@ -303,21 +303,8 @@ func (s *State) DeleteRuntimeByPrefixes(ctx context.Context, prefixes []string, 
 	}
 }
 
-func (s *State) GetRouteStateMap() map[string]interface{} {
-	result := make(map[string]interface{})
-	for k, v := range s.Runtime {
-		result[string(k)] = map[string]interface{}{
-			"protoType":     v.GetProtoType(),
-			"router":        v.GetRouter(),
-			"server":        v.GetServer(),
-			"mcpServer":     v.GetMCPSserver(),
-			"tools":         v.GetTools(),
-			"toolSchemas":   v.GetToolSchemas(),
-			"prompts":       v.GetPrompts(),
-			"promptSchemas": v.GetPromptSchemas(),
-		}
-	}
-	return result
+func (s *State) GetRouteStateMap() map[uriPrefix]runtimeUnit {
+	return s.Runtime
 }
 
 func startMCPServer(ctx context.Context, logger *zap.Logger, prefix string, mcpServer config.MCPServerConfig,

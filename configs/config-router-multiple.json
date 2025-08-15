@@ -20,11 +20,7 @@
                 "mode": "token/Oauth2"
             },
             "consumers": [
-                {
-                    "name": "cnsumer-1",
-                    "description": "Consumer 1",
-                    "token": "acess_token-1"
-                }
+                "mcp-consumer-xxxx"
             ]
         }
     ],

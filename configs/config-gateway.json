@@ -15,18 +15,7 @@
             "auth": {
                 "mode": "token"
             },
-            "consumers": {
-                "token-v1": {
-                    "name": "",
-                    "description": "",
-                    "token": ""
-                },
-                "token-v2": {
-                    "name": "",
-                    "description": "",
-                    "token": ""
-                }
-            }
+            "consumerTokens": ["mcp-consumer-xxxx"]
         },
         "server": {
             "name": "",

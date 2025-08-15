@@ -20,7 +20,7 @@ type (
 
 	MCPConfig struct {
 		Name       string            `json:"name" yaml:"name"`
-		Tenant     string            `json:"tenant" yaml:"tenant"`
+		AppCode    string            `json:"appCode" yaml:"appCode"`
 		CreatedAt  time.Time         `json:"createdAt" yaml:"createdAt"`
 		UpdatedAt  time.Time         `json:"updatedAt" yaml:"updatedAt"`
 		DeletedAt  time.Time         `json:"deletedAt,omitempty" yaml:"deletedAt,omitempty"` // non-zero indicates that all information has been deleted

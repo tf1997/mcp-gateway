@@ -411,9 +411,14 @@ func (s *Server) GetRouteState(c *gin.Context) {
 		return
 	}
 
+	routesMap := make(map[string]interface{})
+	for k, v := range s.state.GetRouteStateMap() {
+		routesMap[string(k)] = v
+	}
+
 	c.JSON(http.StatusOK, gin.H{
 		"status": "ok",
-		"routes": s.state.GetRouteStateMap(),
+		"routes": routesMap,
 	})
 }
 

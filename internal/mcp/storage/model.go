@@ -32,7 +32,7 @@ type MCPConfig struct {
 func (m *MCPConfig) ToMCPConfig() (*config.MCPConfig, error) {
 	cfg := &config.MCPConfig{
 		Name:      m.Name,
-		Tenant:    m.Tenant,
+		AppCode:   m.Tenant,
 		CreatedAt: m.CreatedAt,
 		UpdatedAt: m.UpdatedAt,
 	}
@@ -95,7 +95,7 @@ func FromMCPConfig(cfg *config.MCPConfig) (*MCPConfig, error) {
 
 	return &MCPConfig{
 		Name:       cfg.Name,
-		Tenant:     cfg.Tenant,
+		Tenant:     cfg.AppCode,
 		CreatedAt:  cfg.CreatedAt,
 		UpdatedAt:  cfg.UpdatedAt,
 		Routers:    string(routers),
@@ -156,7 +156,7 @@ type MCPConfigVersion struct {
 func (m *MCPConfigVersion) ToMCPConfig() (*config.MCPConfig, error) {
 	cfg := &config.MCPConfig{
 		Name:      m.Name,
-		Tenant:    m.Tenant,
+		AppCode:   m.Tenant,
 		CreatedAt: m.CreatedAt,
 		UpdatedAt: m.CreatedAt, // Use CreatedAt as UpdatedAt for versioned configs
 	}
@@ -240,7 +240,7 @@ func FromMCPConfigVersion(cfg *config.MCPConfig, version int, createdBy string, 
 
 	return &MCPConfigVersion{
 		Name:       cfg.Name,
-		Tenant:     cfg.Tenant,
+		Tenant:     cfg.AppCode,
 		Version:    version,
 		ActionType: actionType,
 		CreatedBy:  createdBy,
