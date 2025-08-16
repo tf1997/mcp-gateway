@@ -20,10 +20,12 @@ func (s *State) getRuntime(prefix string) runtimeUnit {
 	return runtime
 }
 
-func (s *State) setRouter(prefix string, router *config.RouterConfig) {
-	runtime := s.getRuntime(prefix)
-	runtime.Router = router
-	s.Runtime[uriPrefix(prefix)] = runtime
+func (s *State) GetRuntime(prefix string) *runtimeUnit {
+	unit, ok := s.Runtime[uriPrefix(prefix)]
+	if !ok {
+		return nil
+	}
+	return &unit
 }
 
 func (s *State) GetCORS(prefix string) *config.CORSConfig {
@@ -146,4 +148,41 @@ func (s *State) GetPromptSchemas(prefix string) []mcp.PromptSchema {
 		return nil
 	}
 	return runtime.PromptSchemas
+}
+
+
+func (r *runtimeUnit) GetProtoType() cnst.ProtoType {
+	return r.ProtoType
+}
+
+func (r *runtimeUnit) GetRouter() *config.RouterConfig {
+	return r.Router
+}
+
+func (r *runtimeUnit) GetServer() *config.ServerConfig {
+	return r.Server
+}
+
+func (r *runtimeUnit) GetMCPSserver() *config.MCPServerConfig {
+	return r.McpServer
+}
+
+func (r *runtimeUnit) GetTransport() mcpproxy.Transport {
+	return r.Transport
+}
+
+func (r *runtimeUnit) GetTools() map[toolName]*config.ToolConfig {
+	return r.Tools
+}
+
+func (r *runtimeUnit) GetToolSchemas() []mcp.ToolSchema {
+	return r.ToolSchemas
+}
+
+func (r *runtimeUnit) GetPrompts() map[promptName]*config.PromptConfig {
+	return r.Prompts
+}
+
+func (r *runtimeUnit) GetPromptSchemas() []mcp.PromptSchema {
+	return r.PromptSchemas
 }

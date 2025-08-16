@@ -1,11 +1,11 @@
 package core
 
 import (
-	"slices"
 	"context"
 	"errors"
 	"fmt"
 	"net/http"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -98,6 +98,8 @@ func (s *Server) RegisterRoutes(ctx context.Context) error {
 
 	s.router.GET("/api/v1/configs", s.GetRouteState)
 
+	s.router.POST("/api/v1/consumer_tokens/update", s.handleUpdateConsumerTokens)
+
 	// Only register OAuth routes if OAuth2 is configured
 	if s.auth.IsOAuth2Enabled() {
 		// Create OAuth group with optional CORS middleware
@@ -120,9 +122,9 @@ func (s *Server) RegisterRoutes(ctx context.Context) error {
 
 	loadedState, err := s.store.LoadState(ctx)
 	if err != nil {
-		fmt.Printf("Failed to load state: %v\n", err)
+		s.logger.Error("Failed to load state", zap.Error(err))
 	} else {
-		fmt.Printf("State loaded successfully: %+v\n", loadedState)
+		s.logger.Info("State loaded successfully", zap.Any("state", loadedState))
 		s.state = loadedState
 	}
 	s.logger.Debug("registering root handler")
@@ -164,7 +166,7 @@ func (s *Server) handleRoot(c *gin.Context) {
 
 	// Consumer Token Validation
 	if runtimeUnit.Router != nil { // Check if ConsumerTokens field exists
-		if runtimeUnit.Router.ConsumerTokens != nil || len(runtimeUnit.Router.ConsumerTokens) == 0 {
+		if len(runtimeUnit.Router.ConsumerTokens) == 0 {
 			// If the list is empty, it means no consumer is allowed
 			s.logger.Warn("consumer tokens list is empty, denying access",
 				zap.String("prefix", prefix),
@@ -340,14 +342,9 @@ func (s *Server) UpdateConfigFromHTTP(ctx context.Context, c *gin.Context) {
 		return
 	}
 
-	// Merge all new configurations with existing configs
-	mergedConfigs := currentState.GetRawConfigs()
-	for _, cfg := range configs {
-		mergedConfigs = config.MergeConfigs(mergedConfigs, cfg)
-	}
 
 	// Build new state from updated configs
-	updatedState, err := state.BuildStateFromConfig(ctx, mergedConfigs, currentState, s.logger)
+	updatedState, err := state.UpdateStateFromConfig(ctx, configs, currentState, s.logger)
 	if err != nil {
 		s.logger.Error("failed to build state from updated configs",
 			zap.Error(err))
@@ -425,8 +422,67 @@ func (s *Server) GetRouteState(c *gin.Context) {
 func (s *Server) SaveState(ctx context.Context) {
 	err := s.store.SaveState(ctx, s.state)
 	if err != nil {
-		fmt.Printf("Failed to save state: %v\n", err)
+		s.logger.Error("Failed to save state", zap.Error(err))
 	} else {
-		fmt.Println("State saved successfully!")
+		s.logger.Info("State saved successfully!")
+	}
+}
+
+// rebuildState rebuilds the server's state from the given configurations
+func (s *Server) rebuildState(ctx context.Context, configs []*config.MCPConfig) error {
+	updatedState, err := state.BuildStateFromConfig(ctx, configs, s.state, s.logger)
+	if err != nil {
+		s.logger.Error("failed to build state from updated configs during rebuild",
+			zap.Error(err))
+		return fmt.Errorf("failed to rebuild state: %w", err)
+	}
+	s.state = updatedState
+	s.logger.Info("Server state rebuilt successfully")
+	return nil
+}
+
+func (s *Server) handleUpdateConsumerTokens(c *gin.Context) {
+	var req struct {
+		OldToken string   `json:"oldToken"`
+		NewToken string   `json:"newToken"`
+		Prefixes []string `json:"prefixes"` // Add prefixes field
+	}
+	if err := c.BindJSON(&req); err != nil {
+		s.logger.Error("failed to parse request body for consumer token update",
+			zap.Error(err))
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Invalid request body: " + err.Error(),
+		})
+		return
+	}
+
+	if req.OldToken == "" || req.NewToken == "" {
+		s.logger.Warn("oldToken or newToken is empty for consumer token update")
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "oldToken and newToken cannot be empty",
+		})
+		return
+	}
+
+	// Call the updated method in state
+	changed := s.state.UpdateConsumerToken(req.OldToken, req.NewToken, req.Prefixes)
+ 
+	if changed {
+		// Trigger a state update to apply changes using the new rebuildState method
+		if err := s.rebuildState(c.Request.Context(), s.state.GetRawConfigs()); err != nil {
+			s.logger.Error("failed to rebuild state after consumer token update",
+				zap.Error(err))
+			s.sendProtocolError(c, err, "Failed to rebuild state after token update", http.StatusInternalServerError, mcp.ErrorCodeInternalError)
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{
+			"status":  "ok",
+			"message": "Consumer token updated and configuration reloaded successfully",
+		})
+	} else {
+		c.JSON(http.StatusOK, gin.H{
+			"status":  "ok",
+			"message": "No matching consumer token found to update in specified prefixes",
+		})
 	}
 }
