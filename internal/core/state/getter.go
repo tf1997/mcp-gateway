@@ -150,7 +150,6 @@ func (s *State) GetPromptSchemas(prefix string) []mcp.PromptSchema {
 	return runtime.PromptSchemas
 }
 
-
 func (r *runtimeUnit) GetProtoType() cnst.ProtoType {
 	return r.ProtoType
 }
@@ -186,3 +185,4 @@ func (r *runtimeUnit) GetPrompts() map[promptName]*config.PromptConfig {
 func (r *runtimeUnit) GetPromptSchemas() []mcp.PromptSchema {
 	return r.PromptSchemas
 }
+
