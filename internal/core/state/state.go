@@ -5,6 +5,7 @@ import (
 	"mcp-gateway/internal/common/config"
 	"mcp-gateway/internal/core/mcpproxy"
 	"mcp-gateway/pkg/mcp"
+	"sync"
 )
 
 type (
@@ -17,6 +18,7 @@ type (
 		RawConfigs []*config.MCPConfig       `json:"rawConfigs"`
 		Runtime    map[uriPrefix]runtimeUnit `json:"runtime"`
 		Metrics    metrics                   `json:"metrics"`
+		mu         sync.RWMutex
 	}
 
 	runtimeUnit struct {
@@ -33,12 +35,12 @@ type (
 	}
 
 	metrics struct {
-		totalTools      int
-		missingTools    int
-		httpServers     int
-		mcpServers      int
-		idleHTTPServers int
-		idleMCPServers  int
+		TotalTools      int `json:"totalTools"`
+		MissingTools    int `json:"missingTools"`
+		HttpServers     int `json:"httpServers"`
+		McpServers      int `json:"mcpServers"`
+		IdleHTTPServers int `json:"idleHttpServers"`
+		IdleMCPServers  int `json:"idleMcpServers"`
 	}
 )
 

@@ -1,11 +1,11 @@
 package core
 
 import (
-	"slices"
 	"context"
 	"errors"
 	"fmt"
 	"net/http"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -77,7 +77,7 @@ func (s *Server) RegisterRoutes(ctx context.Context) error {
 		})
 	})
 	s.router.POST("/api/v1/configs", func(c *gin.Context) {
-		s.UpdateConfigFromHTTP(ctx, c)
+		s.UpdateConfigFromHTTPV1(ctx, c)
 		if !c.IsAborted() {
 			c.JSON(http.StatusOK, gin.H{
 				"status":  "ok",
@@ -365,6 +365,72 @@ func (s *Server) UpdateConfigFromHTTP(ctx context.Context, c *gin.Context) {
 
 }
 
+func (s *Server) UpdateConfigFromHTTPV1(ctx context.Context, c *gin.Context) {
+	var configs []*config.MCPConfig
+	if err := c.BindJSON(&configs); err != nil {
+		s.logger.Error("failed to parse request body",
+			zap.Error(err))
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Invalid request body: " + err.Error(),
+		})
+		return
+	}
+	s.logger.Info("Updating MCP configuration")
+
+	for _, cfg := range configs {
+		if err := config.ValidateMCPConfig(cfg); err != nil {
+			var validationErr *config.ValidationError
+			if errors.As(err, &validationErr) {
+				s.logger.Error("Configuration validation failed",
+					zap.String("name", cfg.Name),
+					zap.String("error", validationErr.Error()))
+				c.JSON(http.StatusBadRequest, gin.H{
+					"error": "Configuration validation failed: " + validationErr.Error(),
+				})
+				return
+			}
+			s.logger.Error("failed to validate configuration",
+				zap.String("name", cfg.Name),
+				zap.Error(err))
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": "Failed to validate configuration",
+			})
+			return
+		}
+	}
+
+	// Get current state
+	currentState := s.state
+	if currentState == nil {
+		// HTTP config，directly initialize the state
+		s.logger.Warn("current state is nil, triggering reload")
+		updatedState, err := state.BuildStateFromConfig(ctx, configs, currentState, s.logger)
+		if err != nil {
+			s.logger.Error("failed to build state from updated configs",
+				zap.Error(err))
+			return
+		}
+		s.state = updatedState
+		return
+	}
+
+	updatedState, err := state.UpdateStateFromConfig(ctx, configs, currentState, s.logger)
+	if err != nil {
+		s.logger.Error("failed to build state from updated configs",
+			zap.Error(err))
+		return
+	}
+
+	// Log the changes
+	s.logger.Info("Configuration updated",
+		zap.Int("server_count", updatedState.GetServerCount()),
+		zap.Int("tool_count", updatedState.GetToolCount()),
+		zap.Int("router_count", updatedState.GetRouterCount()))
+
+	// Atomically replace the state
+	s.state = updatedState
+}
+
 func (s *Server) DeleteConfigFromHTTP(ctx context.Context, c *gin.Context) {
 	var prefixes []string
 	if err := c.BindJSON(&prefixes); err != nil {
@@ -417,8 +483,11 @@ func (s *Server) GetRouteState(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"status": "ok",
-		"routes": routesMap,
+		"status":       "ok",
+		"routes":       routesMap,
+		"server_count": s.state.GetServerCount(),
+		"tool_count":   s.state.GetToolCount(),
+		"router_count": s.state.GetRouterCount(),
 	})
 }
 

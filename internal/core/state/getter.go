@@ -8,6 +8,8 @@ import (
 )
 
 func (s *State) getRuntime(prefix string) runtimeUnit {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	runtime, ok := s.Runtime[uriPrefix(prefix)]
 	if !ok {
 		return runtimeUnit{
@@ -21,6 +23,8 @@ func (s *State) getRuntime(prefix string) runtimeUnit {
 }
 
 func (s *State) GetRuntime(prefix string) *runtimeUnit {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	unit, ok := s.Runtime[uriPrefix(prefix)]
 	if !ok {
 		return nil
@@ -29,6 +33,8 @@ func (s *State) GetRuntime(prefix string) *runtimeUnit {
 }
 
 func (s *State) GetCORS(prefix string) *config.CORSConfig {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	runtime, ok := s.Runtime[uriPrefix(prefix)]
 	if ok && runtime.Router != nil {
 		return runtime.Router.CORS
@@ -37,6 +43,8 @@ func (s *State) GetCORS(prefix string) *config.CORSConfig {
 }
 
 func (s *State) GetRouterCount() int {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	count := 0
 	for _, runtime := range s.Runtime {
 		if runtime.Router != nil {
@@ -47,14 +55,16 @@ func (s *State) GetRouterCount() int {
 }
 
 func (s *State) GetToolCount() int {
-	return s.Metrics.totalTools
+	return s.Metrics.TotalTools
 }
 
 func (s *State) GetMissingToolCount() int {
-	return s.Metrics.missingTools
+	return s.Metrics.MissingTools
 }
 
 func (s *State) GetServerCount() int {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	count := 0
 	for _, runtime := range s.Runtime {
 		if runtime.Server != nil {
@@ -65,6 +75,8 @@ func (s *State) GetServerCount() int {
 }
 
 func (s *State) GetTool(prefix, name string) *config.ToolConfig {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	runtime, ok := s.Runtime[uriPrefix(prefix)]
 	if !ok {
 		return nil
@@ -73,6 +85,8 @@ func (s *State) GetTool(prefix, name string) *config.ToolConfig {
 }
 
 func (s *State) GetToolSchemas(prefix string) []mcp.ToolSchema {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	runtime, ok := s.Runtime[uriPrefix(prefix)]
 	if !ok {
 		return nil
@@ -81,6 +95,8 @@ func (s *State) GetToolSchemas(prefix string) []mcp.ToolSchema {
 }
 
 func (s *State) GetServerConfig(prefix string) *config.ServerConfig {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	runtime, ok := s.Runtime[uriPrefix(prefix)]
 	if !ok {
 		return nil
@@ -89,6 +105,8 @@ func (s *State) GetServerConfig(prefix string) *config.ServerConfig {
 }
 
 func (s *State) GetProtoType(prefix string) cnst.ProtoType {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	runtime, ok := s.Runtime[uriPrefix(prefix)]
 	if !ok {
 		return ""
@@ -97,6 +115,8 @@ func (s *State) GetProtoType(prefix string) cnst.ProtoType {
 }
 
 func (s *State) GetTransport(prefix string) mcpproxy.Transport {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	runtime, ok := s.Runtime[uriPrefix(prefix)]
 	if !ok {
 		return nil
@@ -105,6 +125,8 @@ func (s *State) GetTransport(prefix string) mcpproxy.Transport {
 }
 
 func (s *State) GetTransports() map[string]mcpproxy.Transport {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	transports := make(map[string]mcpproxy.Transport)
 	for prefix, runtime := range s.Runtime {
 		if runtime.Transport != nil {
@@ -115,10 +137,14 @@ func (s *State) GetTransports() map[string]mcpproxy.Transport {
 }
 
 func (s *State) GetRawConfigs() []*config.MCPConfig {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	return s.RawConfigs
 }
 
 func (s *State) GetAuth(prefix string) *config.Auth {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	runtime, ok := s.Runtime[uriPrefix(prefix)]
 	if !ok || runtime.Router == nil {
 		return nil
@@ -127,6 +153,8 @@ func (s *State) GetAuth(prefix string) *config.Auth {
 }
 
 func (s *State) GetSSEPrefix(prefix string) string {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	runtime, ok := s.Runtime[uriPrefix(prefix)]
 	if ok && runtime.Router != nil {
 		return runtime.Router.SSEPrefix
@@ -135,6 +163,8 @@ func (s *State) GetSSEPrefix(prefix string) string {
 }
 
 func (s *State) GetPrompt(prefix, name string) *config.PromptConfig {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	runtime, ok := s.Runtime[uriPrefix(prefix)]
 	if !ok {
 		return nil
@@ -143,6 +173,8 @@ func (s *State) GetPrompt(prefix, name string) *config.PromptConfig {
 }
 
 func (s *State) GetPromptSchemas(prefix string) []mcp.PromptSchema {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	runtime, ok := s.Runtime[uriPrefix(prefix)]
 	if !ok {
 		return nil
@@ -185,4 +217,3 @@ func (r *runtimeUnit) GetPrompts() map[promptName]*config.PromptConfig {
 func (r *runtimeUnit) GetPromptSchemas() []mcp.PromptSchema {
 	return r.PromptSchemas
 }
-
