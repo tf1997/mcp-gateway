@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -17,7 +16,9 @@ import (
 	"mcp-gateway/internal/core/state"
 	"mcp-gateway/internal/mcp/session"
 	"mcp-gateway/internal/mcp/storage"
+	"mcp-gateway/pkg/kafka" // Add kafka import
 	"mcp-gateway/pkg/mcp"
+	"mcp-gateway/pkg/utils" // Add utils import
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
@@ -41,11 +42,13 @@ type (
 		toolRespHandler ResponseHandler
 		lastUpdateTime  time.Time
 		auth            auth.Auth
+		kafkaProducer   *kafka.KafkaProducer // Add Kafka producer
+		nodeIP          string               // Store node IP
 	}
 )
 
 // NewServer creates a new MCP server
-func NewServer(logger *zap.Logger, port int, store storage.Store, sessionStore session.Store, a auth.Auth) (*Server, error) {
+func NewServer(logger *zap.Logger, port int, store storage.Store, sessionStore session.Store, a auth.Auth, mcpConfig *config.MCPConfig) (*Server, error) {
 	s := &Server{
 		logger:          logger,
 		port:            port,
@@ -56,6 +59,22 @@ func NewServer(logger *zap.Logger, port int, store storage.Store, sessionStore s
 		shutdownCh:      make(chan struct{}),
 		toolRespHandler: CreateResponseHandlerChain(),
 		auth:            a,
+		nodeIP:          utils.GetLocalIP(),
+	}
+
+	logger.Info("Concurrent node IP", zap.String("node_ip", s.nodeIP))
+
+	if mcpConfig != nil && mcpConfig.Kafka != nil && len(mcpConfig.Kafka.Brokers) > 0 && mcpConfig.Kafka.Topic != "" {
+		s.kafkaProducer = kafka.NewKafkaProducer(
+			&kafka.ProducerConfig{
+				Brokers: mcpConfig.Kafka.Brokers,
+				Topic:   mcpConfig.Kafka.Topic,
+			},
+			logger,
+		)
+		logger.Info("Kafka producer initialized", zap.Strings("brokers", mcpConfig.Kafka.Brokers), zap.String("topic", mcpConfig.Kafka.Topic))
+	} else {
+		logger.Info("Kafka configuration not found or incomplete, Kafka producer not initialized")
 	}
 
 	// Load HTML templates
@@ -163,36 +182,36 @@ func (s *Server) handleRoot(c *gin.Context) {
 	}
 
 	// Consumer Token Validation
-	if runtimeUnit.Router != nil { // Check if ConsumerTokens field exists
-		if runtimeUnit.Router.ConsumerTokens != nil || len(runtimeUnit.Router.ConsumerTokens) == 0 {
-			// If the list is empty, it means no consumer is allowed
-			s.logger.Warn("consumer tokens list is empty, denying access",
-				zap.String("prefix", prefix),
-				zap.String("remote_addr", c.Request.RemoteAddr))
-			s.sendProtocolError(c, nil, "No consumer tokens allowed for this route", http.StatusForbidden, mcp.ErrorCodeUnauthorized)
-			return
-		}
+	// if runtimeUnit.Router != nil { // Check if ConsumerTokens field exists
+	// 	if runtimeUnit.Router.ConsumerTokens != nil || len(runtimeUnit.Router.ConsumerTokens) == 0 {
+	// 		// If the list is empty, it means no consumer is allowed
+	// 		s.logger.Warn("consumer tokens list is empty, denying access",
+	// 			zap.String("prefix", prefix),
+	// 			zap.String("remote_addr", c.Request.RemoteAddr))
+	// 		s.sendProtocolError(c, nil, "No consumer tokens allowed for this route", http.StatusForbidden, mcp.ErrorCodeUnauthorized)
+	// 		return
+	// 	}
 
-		consumerToken := c.GetHeader("X-Consumer-Token")
-		if consumerToken == "" {
-			s.logger.Warn("consumer token missing",
-				zap.String("prefix", prefix),
-				zap.String("remote_addr", c.Request.RemoteAddr))
-			s.sendProtocolError(c, nil, "Consumer token missing", http.StatusForbidden, mcp.ErrorCodeUnauthorized)
-			return
-		}
+	// 	consumerToken := c.GetHeader("X-Consumer-Token")
+	// 	if consumerToken == "" {
+	// 		s.logger.Warn("consumer token missing",
+	// 			zap.String("prefix", prefix),
+	// 			zap.String("remote_addr", c.Request.RemoteAddr))
+	// 		s.sendProtocolError(c, nil, "Consumer token missing", http.StatusForbidden, mcp.ErrorCodeUnauthorized)
+	// 		return
+	// 	}
 
-		found := slices.Contains(runtimeUnit.Router.ConsumerTokens, consumerToken)
+	// 	found := slices.Contains(runtimeUnit.Router.ConsumerTokens, consumerToken)
 
-		if !found {
-			s.logger.Warn("invalid consumer token",
-				zap.String("prefix", prefix),
-				zap.String("consumer_token", consumerToken),
-				zap.String("remote_addr", c.Request.RemoteAddr))
-			s.sendProtocolError(c, nil, "Invalid consumer token", http.StatusForbidden, mcp.ErrorCodeUnauthorized)
-			return
-		}
-	}
+	// 	if !found {
+	// 		s.logger.Warn("invalid consumer token",
+	// 			zap.String("prefix", prefix),
+	// 			zap.String("consumer_token", consumerToken),
+	// 			zap.String("remote_addr", c.Request.RemoteAddr))
+	// 		s.sendProtocolError(c, nil, "Invalid consumer token", http.StatusForbidden, mcp.ErrorCodeUnauthorized)
+	// 		return
+	// 	}
+	// }
 
 	// Check auth configuration
 	auth := s.state.GetAuth(prefix)

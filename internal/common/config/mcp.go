@@ -30,6 +30,12 @@ type (
 		Tools      []ToolConfig      `json:"tools,omitempty" yaml:"tools,omitempty"`
 		Prompts    []PromptConfig    `json:"prompts,omitempty" yaml:"prompts,omitempty"`
 		McpServers []MCPServerConfig `json:"mcpServers,omitempty" yaml:"mcpServers,omitempty"` // proxy mcp servers
+		Kafka      *KafkaConfig      `json:"kafka,omitempty" yaml:"kafka,omitempty"`
+	}
+
+	KafkaConfig struct {
+		Brokers []string `json:"brokers" yaml:"brokers"`
+		Topic   string   `json:"topic" yaml:"topic"`
 	}
 
 	RouterConfig struct {

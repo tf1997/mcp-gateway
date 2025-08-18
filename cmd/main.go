@@ -93,20 +93,6 @@ func run() {
 
 	logger.Info("Loaded configuration", zap.String("path", cfgPath))
 
-	// Initialize PID manager
-	// if pidFile == "" {
-	// 	pidFile = cfg.PID
-	// }
-
-	// pidManager := utils.NewPIDManagerFromConfig(pidFile)
-	// err = pidManager.WritePID()
-	// if err != nil {
-	// 	logger.Fatal("Failed to write PID file",
-	// 		zap.String("path", pidManager.GetPIDFile()),
-	// 		zap.Error(err))
-	// }
-	// defer pidManager.RemovePID()
-
 	logger.Info("Starting mcp-gateway", zap.String("version", version.Get()))
 
 	//Initialize storage and load initial configuration
@@ -132,7 +118,7 @@ func run() {
 	}
 
 	// Create server instance
-	server, err := core.NewServer(logger, cfg.Port, store, sessionStore, a)
+	server, err := core.NewServer(logger, cfg.Port, store, sessionStore, a, &cfg.MCP)
 	if err != nil {
 		logger.Fatal("Failed to create server", zap.Error(err))
 	}

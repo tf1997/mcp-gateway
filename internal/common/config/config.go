@@ -31,6 +31,7 @@ type (
 		Notifier       NotifierConfig   `yaml:"notifier"`
 		Session        SessionConfig    `yaml:"session"`
 		Auth           AuthConfig       `yaml:"auth"`
+		MCP            MCPConfig        `yaml:"mcp"` // Add MCPConfig
 	}
 
 	// SessionConfig represents the session storage configuration

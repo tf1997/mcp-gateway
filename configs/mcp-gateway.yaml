@@ -1,6 +1,6 @@
 port: ${MCP_GATEWAY_PORT:5235}
 pid: "${MCP_GATEWAY_PID:./mcp-gateway.pid}"
-reload_interval: ${MCP_GATEWAY_RELOAD_INTERVAL:10s}
+reload_interval: ${MCP_GATEWAY_RELOAD_INTERVAL:100s}
 reload_switch: ${MCP_GATEWAY_RELOAD_SWITCH:true}
 
 # Logger configuration
@@ -106,3 +106,8 @@ auth:
       - "Mcp-Session-Id"
       - "mcp-protocol-version"
     allowCredentials: true
+
+mcp:
+  kafka:
+    brokers: []  # List of Kafka brokers
+    topic: ""  # Kafka topic for logging
