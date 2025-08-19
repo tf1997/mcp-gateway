@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"mcp-gateway/internal/common/config"
+	"mcp-gateway/internal/common/cnst"
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
@@ -105,8 +106,20 @@ func (s *Server) loggerMiddleware() gin.HandlerFunc {
 		// Determine if the request was successful
 		success := statusCode >= 200 && statusCode < 400
 
+		// Extract session ID if present (for SSE connections)
+		sessionID := c.Query("sessionId")
+		if sessionID == "" && strings.HasSuffix(path, "/sse") {
+			// For initial SSE connection, session ID is generated later.
+			// We can't get it here reliably for the initial request.
+			// It will be added to the SSE event logs.
+		}
+
+		// Extract consumer token using the generic method
+		consumerToken := s.getConsumerToken(c)
+
 		// Prepare log entry for Kafka
-		logEntry := map[string]interface{}{
+		logEntry := map[string]any{
+			"log_type":           "http_request", // Distinguish from SSE event logs
 			"timestamp":          time.Now().Format(time.RFC3339),
 			"method":             c.Request.Method,
 			"path":               path,
@@ -125,12 +138,20 @@ func (s *Server) loggerMiddleware() gin.HandlerFunc {
 			"node_ip":            s.nodeIP,  // Add node IP
 		}
 
+		// Add session_id and consumer_token if available
+		if sessionID != "" {
+			logEntry["session_id"] = sessionID
+		}
+		if consumerToken != "" {
+			logEntry["consumer_token"] = consumerToken
+		}
+
 		// Send log to Kafka if producer is initialized
 		if s.kafkaProducer != nil {
 			go func() {
 				ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 				defer cancel()
-				err := s.kafkaProducer.Produce(ctx, serviceIdentifier, logEntry)
+				err := s.kafkaProducer.Produce(ctx, cnst.KafkaTopicHttpRequest, serviceIdentifier, logEntry) // Use constant for HTTP topic
 				if err != nil {
 					s.logger.Error("failed to send log to Kafka", zap.Error(err), zap.String("service_identifier", serviceIdentifier))
 				}
@@ -165,7 +186,6 @@ func (s *Server) loggerMiddleware() gin.HandlerFunc {
 		}
 	}
 }
-
 
 // recoveryMiddleware recovers from panics and returns 500 error
 func (s *Server) recoveryMiddleware() gin.HandlerFunc {

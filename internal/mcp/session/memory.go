@@ -4,24 +4,32 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"time" // Add time import
 
 	"go.uber.org/zap"
+
+	"mcp-gateway/internal/common/cnst"
+	"mcp-gateway/pkg/kafka" // Add kafka import
 )
 
 // MemoryStore implements Store using in-memory storage
 type MemoryStore struct {
-	logger *zap.Logger
-	mu     sync.RWMutex
-	conns  map[string]Connection
+	logger        *zap.Logger
+	mu            sync.RWMutex
+	conns         map[string]Connection
+	kafkaProducer *kafka.KafkaProducer // Add Kafka producer
+	nodeIP        string               // Add node IP for logging
 }
 
 var _ Store = (*MemoryStore)(nil)
 
 // NewMemoryStore creates a new in-memory session store
-func NewMemoryStore(logger *zap.Logger) *MemoryStore {
+func NewMemoryStore(logger *zap.Logger, kafkaProducer *kafka.KafkaProducer, nodeIP string) *MemoryStore {
 	return &MemoryStore{
-		logger: logger.Named("session.store.memory"),
-		conns:  make(map[string]Connection),
+		logger:        logger.Named("session.store.memory"),
+		conns:         make(map[string]Connection),
+		kafkaProducer: kafkaProducer,
+		nodeIP:        nodeIP,
 	}
 }
 
@@ -37,8 +45,10 @@ func (s *MemoryStore) Register(_ context.Context, meta *Meta) (Connection, error
 
 	// Create new connection
 	conn := &MemoryConnection{
-		meta:  meta,
-		queue: make(chan *Message, 100),
+		meta:          meta,
+		queue:         make(chan *Message, 100),
+		kafkaProducer: s.kafkaProducer, // Pass Kafka producer to connection
+		nodeIP:        s.nodeIP,        // Pass node IP to connection
 	}
 
 	// Store connection
@@ -95,8 +105,11 @@ func (s *MemoryStore) List(_ context.Context) ([]Connection, error) {
 
 // MemoryConnection implements Connection using in-memory storage
 type MemoryConnection struct {
-	meta  *Meta
-	queue chan *Message
+	meta          *Meta
+	queue         chan *Message
+	kafkaProducer *kafka.KafkaProducer // Add Kafka producer
+	logger        *zap.Logger          // Add logger for logging within connection
+	nodeIP        string               // Add node IP for logging
 }
 
 var _ Connection = (*MemoryConnection)(nil)
@@ -107,7 +120,35 @@ func (c *MemoryConnection) EventQueue() <-chan *Message {
 }
 
 // Send implements Connection.Send
-func (c *MemoryConnection) Send(_ context.Context, msg *Message) error {
+func (c *MemoryConnection) Send(ctx context.Context, msg *Message) error {
+	// Prepare log entry for Kafka
+	if c.kafkaProducer != nil {
+		logEntry := map[string]interface{}{
+			"log_type":           "sse_event",
+			"timestamp":          time.Now().Format(time.RFC3339),
+			"session_id":         c.meta.ID,
+			"consumer_token":     c.meta.ConsumerToken,
+			"event_type":         msg.Event,
+			"event_data":         string(msg.Data),
+			"method":             c.meta.Request.Headers["Method"], // Assuming Method is stored in Headers
+			"path":               c.meta.Prefix,                    // Using Prefix as path for SSE events
+			"query":              c.meta.Request.Query,
+			"remote_addr":        c.meta.Request.Headers["X-Forwarded-For"], // Assuming X-Forwarded-For for remote_addr
+			"user_agent":         c.meta.Request.Headers["User-Agent"],      // Assuming User-Agent in Headers
+			"service_identifier": c.meta.Prefix,
+			"node_ip":            c.nodeIP,
+		}
+
+		go func() {
+			logCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			err := c.kafkaProducer.Produce(logCtx, cnst.KafkaTopicSseEvent, c.meta.Prefix, logEntry)
+			if err != nil {
+				c.logger.Error("failed to send SSE event log to Kafka", zap.Error(err), zap.String("session_id", c.meta.ID))
+			}
+		}()
+	}
+
 	select {
 	case c.queue <- msg:
 		return nil

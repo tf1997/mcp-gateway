@@ -10,6 +10,7 @@ import (
 
 	"mcp-gateway/internal/common/cnst"
 	"mcp-gateway/internal/common/config"
+	"mcp-gateway/pkg/kafka" // Add kafka import
 	"mcp-gateway/pkg/utils"
 
 	"github.com/redis/go-redis/v9"
@@ -18,22 +19,22 @@ import (
 
 // RedisStore implements Store using Redis
 type RedisStore struct {
-	logger *zap.Logger
-	client redis.UniversalClient
-	prefix string
-	topic  string
-	pubsub *redis.PubSub
-	// Add a map to track active connections
-	connections map[string]*RedisConnection
-	mu          sync.RWMutex
-	ttl         time.Duration // TTL for session data
+	logger        *zap.Logger
+	client        redis.UniversalClient
+	prefix        string
+	topic         string
+	pubsub        *redis.PubSub
+	connections   map[string]*RedisConnection
+	mu            sync.RWMutex
+	ttl           time.Duration // TTL for session data
+	kafkaProducer *kafka.KafkaProducer // Add Kafka producer
+	nodeIP        string               // Add node IP for logging
 }
 
 var _ Store = (*RedisStore)(nil)
 
 // NewRedisStore creates a new Redis-based session store
-// func NewRedisStore(logger *zap.Logger, addr, username, password string, db int, topic string) (*RedisStore, error) {
-func NewRedisStore(logger *zap.Logger, cfg config.SessionRedisConfig) (*RedisStore, error) {
+func NewRedisStore(logger *zap.Logger, kafkaProducer *kafka.KafkaProducer, cfg config.SessionRedisConfig, nodeIP string) (*RedisStore, error) {
 	addrs := utils.SplitByMultipleDelimiters(cfg.Addr, ";", ",")
 	redisOptions := &redis.UniversalOptions{
 		Addrs:    addrs,
@@ -62,12 +63,14 @@ func NewRedisStore(logger *zap.Logger, cfg config.SessionRedisConfig) (*RedisSto
 		prefix = prefix + ":"
 	}
 	store := &RedisStore{
-		logger:      logger.Named("session.store.redis"),
-		client:      client,
-		prefix:      cfg.Prefix,
-		topic:       cfg.Topic,
-		connections: make(map[string]*RedisConnection),
-		ttl:         cfg.TTL,
+		logger:        logger.Named("session.store.redis"),
+		client:        client,
+		prefix:        cfg.Prefix,
+		topic:         cfg.Topic,
+		connections:   make(map[string]*RedisConnection),
+		ttl:           cfg.TTL,
+		kafkaProducer: kafkaProducer, // Store Kafka producer
+		nodeIP:        nodeIP,        // Store node IP
 	}
 
 	// Subscribe to session updates
@@ -174,9 +177,12 @@ func (s *RedisStore) Register(ctx context.Context, meta *Meta) (Connection, erro
 
 	// Create connection
 	conn := &RedisConnection{
-		store: s,
-		meta:  meta,
-		queue: make(chan *Message, 100),
+		store:         s,
+		meta:          meta,
+		queue:         make(chan *Message, 100),
+		kafkaProducer: s.kafkaProducer, // Pass Kafka producer to connection
+		logger:        s.logger,        // Pass logger to connection
+		nodeIP:        s.nodeIP,        // Pass node IP to connection
 	}
 
 	// Add to active connections
@@ -230,9 +236,12 @@ func (s *RedisStore) Get(ctx context.Context, id string) (Connection, error) {
 	}
 
 	return &RedisConnection{
-		store: s,
-		meta:  &meta,
-		queue: make(chan *Message, 100),
+		store:         s,
+		meta:          &meta,
+		queue:         make(chan *Message, 100),
+		kafkaProducer: s.kafkaProducer, // Pass Kafka producer to connection
+		logger:        s.logger,        // Pass logger to connection
+		nodeIP:        s.nodeIP,        // Pass node IP to connection
 	}, nil
 }
 
@@ -295,9 +304,12 @@ func (s *RedisStore) List(ctx context.Context) ([]Connection, error) {
 		}
 
 		connections = append(connections, &RedisConnection{
-			store: s,
-			meta:  &meta,
-			queue: make(chan *Message, 100),
+			store:         s,
+			meta:          &meta,
+			queue:         make(chan *Message, 100),
+			kafkaProducer: s.kafkaProducer, // Pass Kafka producer to connection
+			logger:        s.logger,        // Pass logger to connection
+			nodeIP:        s.nodeIP,        // Pass node IP to connection
 		})
 	}
 
@@ -316,9 +328,12 @@ func (s *RedisStore) Close() error {
 
 // RedisConnection implements Connection using Redis
 type RedisConnection struct {
-	store *RedisStore
-	meta  *Meta
-	queue chan *Message
+	store         *RedisStore
+	meta          *Meta
+	queue         chan *Message
+	kafkaProducer *kafka.KafkaProducer // Add Kafka producer
+	logger        *zap.Logger          // Add logger for logging within connection
+	nodeIP        string               // Add node IP for logging
 }
 
 var _ Connection = (*RedisConnection)(nil)
@@ -330,6 +345,34 @@ func (c *RedisConnection) EventQueue() <-chan *Message {
 
 // Send implements Connection.Send
 func (c *RedisConnection) Send(ctx context.Context, msg *Message) error {
+	// Prepare log entry for Kafka
+	if c.kafkaProducer != nil {
+		logEntry := map[string]interface{}{
+			"log_type":           "sse_event",
+			"timestamp":          time.Now().Format(time.RFC3339),
+			"session_id":         c.meta.ID,
+			"consumer_token":     c.meta.ConsumerToken,
+			"event_type":         msg.Event,
+			"event_data":         string(msg.Data),
+			"method":             c.meta.Request.Headers["Method"], // Assuming Method is stored in Headers
+			"path":               c.meta.Prefix,                    // Using Prefix as path for SSE events
+			"query":              c.meta.Request.Query,
+			"remote_addr":        c.meta.Request.Headers["X-Forwarded-For"], // Assuming X-Forwarded-For for remote_addr
+			"user_agent":         c.meta.Request.Headers["User-Agent"],      // Assuming User-Agent in Headers
+			"service_identifier": c.meta.Prefix,
+			"node_ip":            c.nodeIP,
+		}
+
+		go func() {
+			logCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			err := c.kafkaProducer.Produce(logCtx, cnst.KafkaTopicSseEvent, c.meta.Prefix, logEntry) // Pass c.meta.Prefix as topic
+			if err != nil {
+				c.logger.Error("failed to send SSE event log to Kafka", zap.Error(err), zap.String("session_id", c.meta.ID))
+			}
+		}()
+	}
+
 	// Renew TTL for both the session data and the session ID in the set
 	key := c.store.prefix + c.meta.ID
 	if err := c.store.client.Expire(ctx, key, c.store.ttl).Err(); err != nil {

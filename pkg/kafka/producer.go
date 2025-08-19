@@ -12,7 +12,6 @@ import (
 // ProducerConfig holds Kafka producer configuration
 type ProducerConfig struct {
 	Brokers []string
-	Topic   string
 }
 
 // KafkaProducer is a wrapper for kafka.Writer
@@ -51,7 +50,6 @@ func NewKafkaProducer(cfg *ProducerConfig, logger *zap.Logger) *KafkaProducer {
 	zapLogger := logger.With(zap.String("component", "kafka-writer"))
 	writer := &kafka.Writer{
 		Addr:     kafka.TCP(cfg.Brokers...),
-		Topic:    cfg.Topic,
 		Balancer: &kafka.LeastBytes{},
 		Logger:   &ZapKafkaLogger{logger: zapLogger}, // Use the custom ZapKafkaLogger
 	}
@@ -62,7 +60,7 @@ func NewKafkaProducer(cfg *ProducerConfig, logger *zap.Logger) *KafkaProducer {
 }
 
 // Produce sends a message to Kafka
-func (kp *KafkaProducer) Produce(ctx context.Context, key string, value interface{}) error {
+func (kp *KafkaProducer) Produce(ctx context.Context, topic string, key string, value interface{}) error {
 	messageValue, err := json.Marshal(value)
 	if err != nil {
 		kp.logger.Error("failed to marshal message value", zap.Error(err))
@@ -70,6 +68,7 @@ func (kp *KafkaProducer) Produce(ctx context.Context, key string, value interfac
 	}
 
 	msg := kafka.Message{
+		Topic: topic, // Set topic here
 		Key:   []byte(key),
 		Value: messageValue,
 		Time:  time.Now(),
@@ -80,7 +79,7 @@ func (kp *KafkaProducer) Produce(ctx context.Context, key string, value interfac
 		kp.logger.Error("failed to write message to kafka", zap.Error(err))
 		return err
 	}
-	kp.logger.Debug("message sent to kafka", zap.String("key", key), zap.ByteString("value", messageValue))
+	kp.logger.Debug("message sent to kafka", zap.String("topic", topic), zap.String("key", key), zap.ByteString("value", messageValue))
 	return nil
 }
 

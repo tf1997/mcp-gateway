@@ -8,6 +8,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"slices"
 
 	"mcp-gateway/internal/auth"
 	"mcp-gateway/internal/common/cnst"
@@ -48,7 +49,9 @@ type (
 )
 
 // NewServer creates a new MCP server
-func NewServer(logger *zap.Logger, port int, store storage.Store, sessionStore session.Store, a auth.Auth, mcpConfig *config.MCPConfig) (*Server, error) {
+func NewServer(logger *zap.Logger, port int, store storage.Store, sessionStore session.Store, a auth.Auth, mcpConfig *config.MCPConfig, sessionConfig *config.SessionConfig) (*Server, error) {
+	nodeIP := utils.GetLocalIP() // Get node IP here
+
 	s := &Server{
 		logger:          logger,
 		port:            port,
@@ -59,20 +62,19 @@ func NewServer(logger *zap.Logger, port int, store storage.Store, sessionStore s
 		shutdownCh:      make(chan struct{}),
 		toolRespHandler: CreateResponseHandlerChain(),
 		auth:            a,
-		nodeIP:          utils.GetLocalIP(),
+		nodeIP:          nodeIP, // Assign node IP
 	}
 
 	logger.Info("Concurrent node IP", zap.String("node_ip", s.nodeIP))
 
-	if mcpConfig != nil && mcpConfig.Kafka != nil && len(mcpConfig.Kafka.Brokers) > 0 && mcpConfig.Kafka.Topic != "" {
+	if mcpConfig != nil && mcpConfig.Kafka != nil && len(mcpConfig.Kafka.Brokers) > 0 { // Removed Topic check
 		s.kafkaProducer = kafka.NewKafkaProducer(
 			&kafka.ProducerConfig{
 				Brokers: mcpConfig.Kafka.Brokers,
-				Topic:   mcpConfig.Kafka.Topic,
 			},
 			logger,
 		)
-		logger.Info("Kafka producer initialized", zap.Strings("brokers", mcpConfig.Kafka.Brokers), zap.String("topic", mcpConfig.Kafka.Topic))
+		logger.Info("Kafka producer initialized", zap.Strings("brokers", mcpConfig.Kafka.Brokers)) // Removed topic from log
 	} else {
 		logger.Info("Kafka configuration not found or incomplete, Kafka producer not initialized")
 	}
@@ -84,6 +86,14 @@ func NewServer(logger *zap.Logger, port int, store storage.Store, sessionStore s
 
 	s.router.Use(s.loggerMiddleware())
 	s.router.Use(s.recoveryMiddleware())
+
+	// Re-initialize session store with Kafka producer and node IP
+	var err error
+	s.sessions, err = session.NewStore(logger, s.kafkaProducer, sessionConfig, s.nodeIP)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create session store: %w", err)
+	}
+
 	return s, nil
 }
 
@@ -182,36 +192,36 @@ func (s *Server) handleRoot(c *gin.Context) {
 	}
 
 	// Consumer Token Validation
-	// if runtimeUnit.Router != nil { // Check if ConsumerTokens field exists
-	// 	if runtimeUnit.Router.ConsumerTokens != nil || len(runtimeUnit.Router.ConsumerTokens) == 0 {
-	// 		// If the list is empty, it means no consumer is allowed
-	// 		s.logger.Warn("consumer tokens list is empty, denying access",
-	// 			zap.String("prefix", prefix),
-	// 			zap.String("remote_addr", c.Request.RemoteAddr))
-	// 		s.sendProtocolError(c, nil, "No consumer tokens allowed for this route", http.StatusForbidden, mcp.ErrorCodeUnauthorized)
-	// 		return
-	// 	}
+	if runtimeUnit.Router != nil { // Check if ConsumerTokens field exists
+		if runtimeUnit.Router.ConsumerTokens != nil || len(runtimeUnit.Router.ConsumerTokens) == 0 {
+			// If the list is empty, it means no consumer is allowed
+			s.logger.Warn("consumer tokens list is empty, denying access",
+				zap.String("prefix", prefix),
+				zap.String("remote_addr", c.Request.RemoteAddr))
+			s.sendProtocolError(c, nil, "No consumer tokens allowed for this route", http.StatusForbidden, mcp.ErrorCodeUnauthorized)
+			return
+		}
 
-	// 	consumerToken := c.GetHeader("X-Consumer-Token")
-	// 	if consumerToken == "" {
-	// 		s.logger.Warn("consumer token missing",
-	// 			zap.String("prefix", prefix),
-	// 			zap.String("remote_addr", c.Request.RemoteAddr))
-	// 		s.sendProtocolError(c, nil, "Consumer token missing", http.StatusForbidden, mcp.ErrorCodeUnauthorized)
-	// 		return
-	// 	}
+		consumerToken := s.getConsumerToken(c)
+		if consumerToken == "" {
+			s.logger.Warn("consumer token missing",
+				zap.String("prefix", prefix),
+				zap.String("remote_addr", c.Request.RemoteAddr))
+			s.sendProtocolError(c, nil, "Consumer token missing", http.StatusForbidden, mcp.ErrorCodeUnauthorized)
+			return
+		}
 
-	// 	found := slices.Contains(runtimeUnit.Router.ConsumerTokens, consumerToken)
+		found := slices.Contains(runtimeUnit.Router.ConsumerTokens, consumerToken)
 
-	// 	if !found {
-	// 		s.logger.Warn("invalid consumer token",
-	// 			zap.String("prefix", prefix),
-	// 			zap.String("consumer_token", consumerToken),
-	// 			zap.String("remote_addr", c.Request.RemoteAddr))
-	// 		s.sendProtocolError(c, nil, "Invalid consumer token", http.StatusForbidden, mcp.ErrorCodeUnauthorized)
-	// 		return
-	// 	}
-	// }
+		if !found {
+			s.logger.Warn("invalid consumer token",
+				zap.String("prefix", prefix),
+				zap.String("consumer_token", consumerToken),
+				zap.String("remote_addr", c.Request.RemoteAddr))
+			s.sendProtocolError(c, nil, "Invalid consumer token", http.StatusForbidden, mcp.ErrorCodeUnauthorized)
+			return
+		}
+	}
 
 	// Check auth configuration
 	auth := s.state.GetAuth(prefix)
@@ -278,6 +288,23 @@ func (s *Server) Start() {
 			s.logger.Error("failed to start server", zap.Error(err))
 		}
 	}()
+}
+
+// getConsumerToken extracts the consumer token from the request headers.
+func (s *Server) getConsumerToken(c *gin.Context) string {
+	// Check X-Mcp-Consumer-Token header first
+	token := c.GetHeader("X-Mcp-Consumer-Token")
+	if token != "" {
+		return token
+	}
+
+	// Fallback to Authorization header (Bearer token)
+	authHeader := c.Request.Header.Get("Authorization")
+	if strings.HasPrefix(authHeader, "Bearer ") {
+		return strings.TrimPrefix(authHeader, "Bearer ")
+	}
+
+	return ""
 }
 
 // Shutdown gracefully shuts down the server

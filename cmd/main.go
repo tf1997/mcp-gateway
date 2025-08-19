@@ -104,7 +104,9 @@ func run() {
 	}
 
 	// Initialize session store
-	sessionStore, err := session.NewStore(logger, &cfg.Session)
+	// Note: server.kafkaProducer and server.nodeIP are not available here yet.
+	// The session store will be re-initialized in core.NewServer with these values.
+	sessionStore, err := session.NewStore(logger, nil, &cfg.Session, "") // Pass nil for kafkaProducer and empty string for nodeIP initially
 	if err != nil {
 		logger.Fatal("failed to initialize session store",
 			zap.String("type", cfg.Session.Type),
@@ -118,7 +120,7 @@ func run() {
 	}
 
 	// Create server instance
-	server, err := core.NewServer(logger, cfg.Port, store, sessionStore, a, &cfg.MCP)
+	server, err := core.NewServer(logger, cfg.Port, store, sessionStore, a, &cfg.MCP, &cfg.Session)
 	if err != nil {
 		logger.Fatal("Failed to create server", zap.Error(err))
 	}

@@ -56,13 +56,16 @@ func (s *Server) handleSSE(c *gin.Context) {
 	}
 
 	sessionID := uuid.New().String()
+	consumerToken := s.getConsumerToken(c) // Get consumer token using the generic method
+
 	meta := &session.Meta{
-		ID:        sessionID,
-		CreatedAt: time.Now(),
-		Prefix:    prefix,
-		Type:      "sse",
-		Request:   requestInfo,
-		Extra:     nil,
+		ID:            sessionID,
+		CreatedAt:     time.Now(),
+		Prefix:        prefix,
+		Type:          "sse",
+		Request:       requestInfo,
+		ConsumerToken: consumerToken, // Add consumer token to session meta
+		Extra:         nil,
 	}
 
 	s.logger.Info("establishing SSE connection",
