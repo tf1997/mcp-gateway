@@ -31,7 +31,6 @@ type (
 		ToolSchemas    []mcp.ToolSchema                    `json:"toolSchemas"`
 		Prompts        map[promptName]*config.PromptConfig `json:"prompts"`
 		PromptSchemas  []mcp.PromptSchema                  `json:"promptSchemas"`
-		ConsumerTokens []string                            `json:"consumerTokens,omitempty"`
 	}
 
 	metrics struct {

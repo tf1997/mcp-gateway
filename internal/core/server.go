@@ -193,7 +193,7 @@ func (s *Server) handleRoot(c *gin.Context) {
 
 	// Consumer Token Validation
 	if runtimeUnit.Router != nil { // Check if ConsumerTokens field exists
-		if runtimeUnit.Router.ConsumerTokens != nil || len(runtimeUnit.Router.ConsumerTokens) == 0 {
+		if len(runtimeUnit.Router.ConsumerTokens) == 0 {
 			// If the list is empty, it means no consumer is allowed
 			s.logger.Warn("consumer tokens list is empty, denying access",
 				zap.String("prefix", prefix),

@@ -347,9 +347,11 @@ func (c *RedisConnection) EventQueue() <-chan *Message {
 func (c *RedisConnection) Send(ctx context.Context, msg *Message) error {
 	// Prepare log entry for Kafka
 	if c.kafkaProducer != nil {
-		logEntry := map[string]interface{}{
+		logEntry := map[string]any{
 			"log_type":           "sse_event",
 			"timestamp":          time.Now().Format(time.RFC3339),
+			"startTime":          time.Now().Format(time.DateTime), // Add startTime
+			"endTime":            time.Now().Format(time.DateTime),   // Add endTime
 			"session_id":         c.meta.ID,
 			"consumer_token":     c.meta.ConsumerToken,
 			"event_type":         msg.Event,

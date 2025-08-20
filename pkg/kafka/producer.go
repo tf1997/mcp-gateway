@@ -3,6 +3,7 @@ package kafka
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"time"
 
 	"github.com/segmentio/kafka-go"
@@ -61,14 +62,36 @@ func NewKafkaProducer(cfg *ProducerConfig, logger *zap.Logger) *KafkaProducer {
 
 // Produce sends a message to Kafka
 func (kp *KafkaProducer) Produce(ctx context.Context, topic string, key string, value interface{}) error {
-	messageValue, err := json.Marshal(value)
+	// Marshal the original value to JSON first
+	originalValueBytes, err := json.Marshal(value)
 	if err != nil {
-		kp.logger.Error("failed to marshal message value", zap.Error(err))
+		kp.logger.Error("failed to marshal original message value", zap.Error(err))
+		return err
+	}
+
+	// Unmarshal the JSON into a map to process fields
+	var valueMap map[string]interface{}
+	if err := json.Unmarshal(originalValueBytes, &valueMap); err != nil {
+		// If it's not a map (e.g., a simple string or number), handle it by converting the whole thing to string
+		kp.logger.Warn("value is not a map, converting to string", zap.String("original_value", fmt.Sprintf("%v", value)))
+		valueMap = map[string]interface{}{"message": fmt.Sprintf("%v", value)} // Put it under a generic key
+	}
+
+	// Create a new map to hold the final stringified log data
+	stringifiedLogData := make(map[string]string)
+	for k, v := range valueMap {
+		stringifiedLogData[k] = fmt.Sprintf("%v", v)
+	}
+
+	// Marshal the final stringified log data
+	messageValue, err := json.Marshal(stringifiedLogData)
+	if err != nil {
+		kp.logger.Error("failed to marshal final log data", zap.Error(err))
 		return err
 	}
 
 	msg := kafka.Message{
-		Topic: topic, // Set topic here
+		Topic: topic,
 		Key:   []byte(key),
 		Value: messageValue,
 		Time:  time.Now(),

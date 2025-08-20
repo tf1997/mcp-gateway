@@ -72,9 +72,6 @@ func deepCopyRuntimeUnit(original runtimeUnit) runtimeUnit {
 	if original.PromptSchemas != nil {
 		newUnit.PromptSchemas = append([]mcp.PromptSchema(nil), original.PromptSchemas...)
 	}
-	if original.ConsumerTokens != nil {
-		newUnit.ConsumerTokens = append([]string(nil), original.ConsumerTokens...)
-	}
 
 	return newUnit
 }

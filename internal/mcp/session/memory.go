@@ -126,6 +126,8 @@ func (c *MemoryConnection) Send(ctx context.Context, msg *Message) error {
 		logEntry := map[string]interface{}{
 			"log_type":           "sse_event",
 			"timestamp":          time.Now().Format(time.RFC3339),
+			"startTime":          time.Now().Format(time.DateTime),
+			"endTime":            time.Now().Format(time.DateTime), 
 			"session_id":         c.meta.ID,
 			"consumer_token":     c.meta.ConsumerToken,
 			"event_type":         msg.Event,

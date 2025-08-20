@@ -118,9 +118,12 @@ func (s *Server) loggerMiddleware() gin.HandlerFunc {
 		consumerToken := s.getConsumerToken(c)
 
 		// Prepare log entry for Kafka
+		//日志增加请求开始和请求结束时间，命名为startTime endTime
 		logEntry := map[string]any{
 			"log_type":           "http_request", // Distinguish from SSE event logs
 			"timestamp":          time.Now().Format(time.RFC3339),
+			"startTime":          startTime.Format(time.DateTime),
+			"endTime":            time.Now().Format(time.DateTime),
 			"method":             c.Request.Method,
 			"path":               path,
 			"query":              query,
