@@ -18,6 +18,8 @@ import (
 	"mcp-gateway/pkg/logger"
 	"mcp-gateway/pkg/utils"
 	"mcp-gateway/pkg/version"
+	"mcp-gateway/pkg/rpc/client"
+	RPCServer "mcp-gateway/pkg/rpc/server"
 
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
@@ -57,7 +59,7 @@ var (
 			fmt.Println("Reload signal sent successfully")
 		},
 	}
-	
+
 	rootCmd = &cobra.Command{
 		Use:   cnst.CommandName,
 		Short: "MCP Gateway service",
@@ -95,6 +97,11 @@ func run() {
 
 	logger.Info("Starting mcp-gateway", zap.String("version", version.Get()))
 
+	if cfg.ClusterManger != "" {
+		logger.Info("Cluster manager configured", zap.String("cluster_manager", cfg.ClusterManger))
+		go client.Heartbeat(logger, cfg, utils.GetLocalIP())
+	}
+
 	//Initialize storage and load initial configuration
 	store, err := storage.NewStore(logger, &cfg.Storage)
 	if err != nil {
@@ -129,6 +136,11 @@ func run() {
 	if err != nil {
 		logger.Fatal("failed to register routes",
 			zap.Error(err))
+	}
+
+	if cfg.RPCPort > 0 {
+		logger.Info("gRPC server enabled, start to intializing...", zap.Int("rpc_port", cfg.RPCPort))
+		go RPCServer.Start(cfg.RPCPort, logger, server)
 	}
 
 	// ntf, err := notifier.NewNotifier(ctx, logger, &cfg.Notifier)

@@ -29,6 +29,10 @@ Welcome to the **MCP Gateway** project! This repository hosts a robust and effic
     ```bash
     go mod tidy
     ```
+3.  **gRpc proto generation(Option)**:
+    ```bash
+    export PATH=$PATH:$(go env GOPATH)/bin && protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative pkg/rpc/proto/generic_rpc.proto
+    ```
 
 ### Configuration
 

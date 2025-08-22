@@ -2,13 +2,14 @@ package core
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
+	"slices"
 	"strings"
 	"sync"
 	"time"
-	"slices"
 
 	"mcp-gateway/internal/auth"
 	"mcp-gateway/internal/common/cnst"
@@ -544,4 +545,92 @@ func (s *Server) SaveState(ctx context.Context) {
 	} else {
 		s.logger.Info("State saved successfully!")
 	}
+}
+
+// UpdateConfigFromRPC updates the MCP configuration from an RPC request body.
+func (s *Server) UpdateConfigFromRPC(ctx context.Context, configBody []byte) error {
+	var configs []*config.MCPConfig
+	if err := json.Unmarshal(configBody, &configs); err != nil {
+		s.logger.Error("failed to parse RPC request body",
+			zap.Error(err))
+		return fmt.Errorf("invalid request body: %w", err)
+	}
+
+	s.logger.Info("Updating MCP configuration from RPC")
+
+	for _, cfg := range configs {
+		if err := config.ValidateMCPConfig(cfg); err != nil {
+			var validationErr *config.ValidationError
+			if errors.As(err, &validationErr) {
+				s.logger.Error("Configuration validation failed for RPC update",
+					zap.String("name", cfg.Name),
+					zap.String("error", validationErr.Error()))
+				return fmt.Errorf("configuration validation failed for %s: %w", cfg.Name, validationErr)
+			}
+			s.logger.Error("failed to validate configuration for RPC update",
+				zap.String("name", cfg.Name),
+				zap.Error(err))
+			return fmt.Errorf("failed to validate configuration for %s: %w", cfg.Name, err)
+		}
+	}
+
+	currentState := s.state
+	if currentState == nil {
+		s.logger.Warn("current state is nil during RPC update, triggering reload")
+		updatedState, err := state.BuildStateFromConfig(ctx, configs, currentState, s.logger)
+		if err != nil {
+			s.logger.Error("failed to build state from updated configs during RPC update",
+				zap.Error(err))
+			return fmt.Errorf("failed to build state from updated configs: %w", err)
+		}
+		s.state = updatedState
+		return nil
+	}
+
+	updatedState, err := state.UpdateStateFromConfig(ctx, configs, currentState, s.logger)
+	if err != nil {
+		s.logger.Error("failed to build state from updated configs during RPC update",
+			zap.Error(err))
+		return fmt.Errorf("failed to build state from updated configs: %w", err)
+	}
+
+	s.logger.Info("Configuration updated from RPC",
+		zap.Int("server_count", updatedState.GetServerCount()),
+		zap.Int("tool_count", updatedState.GetToolCount()),
+		zap.Int("router_count", updatedState.GetRouterCount()))
+
+	s.state = updatedState
+	return nil
+}
+
+// DeleteConfigFromRPC deletes MCP configurations based on prefixes from an RPC request body.
+func (s *Server) DeleteConfigFromRPC(ctx context.Context, configBody []byte) error {
+	var prefixes []string
+	if err := json.Unmarshal(configBody, &prefixes); err != nil {
+		s.logger.Error("failed to parse RPC request body for delete",
+			zap.Error(err))
+		return fmt.Errorf("invalid request body: %w", err)
+	}
+
+	if len(prefixes) == 0 {
+		s.logger.Warn("empty prefixes list for RPC delete, nothing to delete")
+		return fmt.Errorf("prefixes list cannot be empty")
+	}
+
+	s.logger.Info("Deleting MCP configuration from RPC", zap.Strings("prefixes", prefixes))
+
+	currentState := s.state
+	if currentState == nil {
+		s.logger.Warn("current state is nil during RPC delete, nothing to delete")
+		return nil // No state to delete from
+	}
+
+	currentState.DeleteRuntimeByPrefixes(ctx, prefixes, s.logger)
+
+	s.logger.Info("Configuration deleted from RPC",
+		zap.Int("server_count", currentState.GetServerCount()),
+		zap.Int("tool_count", currentState.GetToolCount()),
+		zap.Int("router_count", currentState.GetRouterCount()))
+
+	return nil
 }
