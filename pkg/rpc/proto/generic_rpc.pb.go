@@ -26,14 +26,8 @@ type GenericRequest struct {
 	Code          string                 `protobuf:"bytes,1,opt,name=code,proto3" json:"code,omitempty"`
 	ClientIp      string                 `protobuf:"bytes,2,opt,name=client_ip,json=clientIp,proto3" json:"client_ip,omitempty"`
 	Server        string                 `protobuf:"bytes,3,opt,name=server,proto3" json:"server,omitempty"`
-	Module        string                 `protobuf:"bytes,4,opt,name=module,proto3" json:"module,omitempty"`
 	Method        string                 `protobuf:"bytes,5,opt,name=method,proto3" json:"method,omitempty"`
-	Token         string                 `protobuf:"bytes,6,opt,name=token,proto3" json:"token,omitempty"`
 	Body          string                 `protobuf:"bytes,7,opt,name=body,proto3" json:"body,omitempty"`
-	Query         string                 `protobuf:"bytes,8,opt,name=query,proto3" json:"query,omitempty"`
-	Header        string                 `protobuf:"bytes,9,opt,name=header,proto3" json:"header,omitempty"`
-	File          []byte                 `protobuf:"bytes,10,opt,name=file,proto3" json:"file,omitempty"`
-	SerializeBody []byte                 `protobuf:"bytes,11,opt,name=serialize_body,json=serializeBody,proto3" json:"serialize_body,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -89,23 +83,9 @@ func (x *GenericRequest) GetServer() string {
 	return ""
 }
 
-func (x *GenericRequest) GetModule() string {
-	if x != nil {
-		return x.Module
-	}
-	return ""
-}
-
 func (x *GenericRequest) GetMethod() string {
 	if x != nil {
 		return x.Method
-	}
-	return ""
-}
-
-func (x *GenericRequest) GetToken() string {
-	if x != nil {
-		return x.Token
 	}
 	return ""
 }
@@ -117,46 +97,16 @@ func (x *GenericRequest) GetBody() string {
 	return ""
 }
 
-func (x *GenericRequest) GetQuery() string {
-	if x != nil {
-		return x.Query
-	}
-	return ""
-}
-
-func (x *GenericRequest) GetHeader() string {
-	if x != nil {
-		return x.Header
-	}
-	return ""
-}
-
-func (x *GenericRequest) GetFile() []byte {
-	if x != nil {
-		return x.File
-	}
-	return nil
-}
-
-func (x *GenericRequest) GetSerializeBody() []byte {
-	if x != nil {
-		return x.SerializeBody
-	}
-	return nil
-}
-
 type GenericResponse struct {
-	state           protoimpl.MessageState `protogen:"open.v1"`
-	Code            string                 `protobuf:"bytes,1,opt,name=code,proto3" json:"code,omitempty"`
-	NodeIp          string                 `protobuf:"bytes,2,opt,name=node_ip,json=nodeIp,proto3" json:"node_ip,omitempty"`
-	Ts              int64                  `protobuf:"varint,3,opt,name=ts,proto3" json:"ts,omitempty"`
-	Status          int32                  `protobuf:"varint,4,opt,name=status,proto3" json:"status,omitempty"`
-	Data            string                 `protobuf:"bytes,5,opt,name=data,proto3" json:"data,omitempty"`
-	Message         string                 `protobuf:"bytes,6,opt,name=message,proto3" json:"message,omitempty"`
-	File            []byte                 `protobuf:"bytes,7,opt,name=file,proto3" json:"file,omitempty"`
-	DeserializeBody []byte                 `protobuf:"bytes,8,opt,name=deserialize_body,json=deserializeBody,proto3" json:"deserialize_body,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Code          string                 `protobuf:"bytes,1,opt,name=code,proto3" json:"code,omitempty"`
+	NodeIp        string                 `protobuf:"bytes,2,opt,name=node_ip,json=nodeIp,proto3" json:"node_ip,omitempty"`
+	Ts            int64                  `protobuf:"varint,3,opt,name=ts,proto3" json:"ts,omitempty"`
+	Status        int32                  `protobuf:"varint,4,opt,name=status,proto3" json:"status,omitempty"`
+	Data          string                 `protobuf:"bytes,5,opt,name=data,proto3" json:"data,omitempty"`
+	Message       string                 `protobuf:"bytes,6,opt,name=message,proto3" json:"message,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *GenericResponse) Reset() {
@@ -231,47 +181,24 @@ func (x *GenericResponse) GetMessage() string {
 	return ""
 }
 
-func (x *GenericResponse) GetFile() []byte {
-	if x != nil {
-		return x.File
-	}
-	return nil
-}
-
-func (x *GenericResponse) GetDeserializeBody() []byte {
-	if x != nil {
-		return x.DeserializeBody
-	}
-	return nil
-}
-
 var File_pkg_rpc_proto_generic_rpc_proto protoreflect.FileDescriptor
 
 const file_pkg_rpc_proto_generic_rpc_proto_rawDesc = "" +
 	"\n" +
-	"\x1fpkg/rpc/proto/generic_rpc.proto\x12\vgeneric_rpc\"\x9c\x02\n" +
+	"\x1fpkg/rpc/proto/generic_rpc.proto\x12\vgeneric_rpc\"\x85\x01\n" +
 	"\x0eGenericRequest\x12\x12\n" +
 	"\x04code\x18\x01 \x01(\tR\x04code\x12\x1b\n" +
 	"\tclient_ip\x18\x02 \x01(\tR\bclientIp\x12\x16\n" +
 	"\x06server\x18\x03 \x01(\tR\x06server\x12\x16\n" +
-	"\x06module\x18\x04 \x01(\tR\x06module\x12\x16\n" +
-	"\x06method\x18\x05 \x01(\tR\x06method\x12\x14\n" +
-	"\x05token\x18\x06 \x01(\tR\x05token\x12\x12\n" +
-	"\x04body\x18\a \x01(\tR\x04body\x12\x14\n" +
-	"\x05query\x18\b \x01(\tR\x05query\x12\x16\n" +
-	"\x06header\x18\t \x01(\tR\x06header\x12\x12\n" +
-	"\x04file\x18\n" +
-	" \x01(\fR\x04file\x12%\n" +
-	"\x0eserialize_body\x18\v \x01(\fR\rserializeBody\"\xd3\x01\n" +
+	"\x06method\x18\x05 \x01(\tR\x06method\x12\x12\n" +
+	"\x04body\x18\a \x01(\tR\x04body\"\x94\x01\n" +
 	"\x0fGenericResponse\x12\x12\n" +
 	"\x04code\x18\x01 \x01(\tR\x04code\x12\x17\n" +
 	"\anode_ip\x18\x02 \x01(\tR\x06nodeIp\x12\x0e\n" +
 	"\x02ts\x18\x03 \x01(\x03R\x02ts\x12\x16\n" +
 	"\x06status\x18\x04 \x01(\x05R\x06status\x12\x12\n" +
 	"\x04data\x18\x05 \x01(\tR\x04data\x12\x18\n" +
-	"\amessage\x18\x06 \x01(\tR\amessage\x12\x12\n" +
-	"\x04file\x18\a \x01(\fR\x04file\x12)\n" +
-	"\x10deserialize_body\x18\b \x01(\fR\x0fdeserializeBody2\xa3\x01\n" +
+	"\amessage\x18\x06 \x01(\tR\amessage2\xa3\x01\n" +
 	"\x0eGenericService\x12G\n" +
 	"\bExchange\x12\x1b.generic_rpc.GenericRequest\x1a\x1c.generic_rpc.GenericResponse\"\x00\x12H\n" +
 	"\tHeartbeat\x12\x1b.generic_rpc.GenericRequest\x1a\x1c.generic_rpc.GenericResponse\"\x00B\x1bZ\x19mcp-gateway/pkg/rpc/protob\x06proto3"

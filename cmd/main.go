@@ -97,8 +97,8 @@ func run() {
 
 	logger.Info("Starting mcp-gateway", zap.String("version", version.Get()))
 
-	if cfg.ClusterManger != "" {
-		logger.Info("Cluster manager configured", zap.String("cluster_manager", cfg.ClusterManger))
+	if cfg.ClusterManager != "" {
+		logger.Info("Cluster manager configured", zap.String("cluster_manager", cfg.ClusterManager))
 		go client.Heartbeat(logger, cfg, utils.GetLocalIP())
 	}
 

@@ -24,7 +24,7 @@ func Heartbeat(logger *zap.Logger, cfg *config.MCPGatewayConfig, nodeIp string) 
 }
 
 func heartbeat(cfg *config.MCPGatewayConfig, nodeIp string) error {
-	conn, err := grpc.NewClient(cfg.ClusterManger, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.NewClient(cfg.ClusterManager, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return fmt.Errorf("did not connect: %v", err)
 	}

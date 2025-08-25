@@ -23,8 +23,8 @@ type Server struct {
 // Exchange implements the Exchange RPC method for GenericService.
 func (s *Server) Exchange(ctx context.Context, in *genericpb.GenericRequest) (*genericpb.GenericResponse, error) {
 
-	fmt.Printf("Received Generic Exchange Request: Code=%s, Server=%s, Module=%s, Method=%s\n",
-		in.GetCode(), in.GetServer(), in.GetModule(), in.GetMethod())
+	fmt.Printf("Received Generic Exchange Request: Code=%s, Server=%s, Method=%s\n",
+		in.GetCode(), in.GetServer(), in.GetMethod())
 
 	if in.GetCode() == "api_v1_configs_update" {
 		if s.coreServer == nil {
@@ -52,7 +52,7 @@ func (s *Server) Exchange(ctx context.Context, in *genericpb.GenericRequest) (*g
 	// Example logic: echo back some data or process based on request
 	return response.NewSuccessResponse(
 		in.GetCode(),
-		fmt.Sprintf("Processed request for %s/%s.%s", in.GetServer(), in.GetModule(), in.GetMethod()),
+		fmt.Sprintf("Processed request for %s.%s", in.GetServer(), in.GetMethod()),
 		"Success",
 	), nil
 }
@@ -75,7 +75,7 @@ func Start(port int, logger *zap.Logger, coreServer *core.Server) error {
 	s := grpc.NewServer()
 	genericpb.RegisterGenericServiceServer(s, &Server{logger: logger, coreServer: coreServer}) // Register GenericService
 
-	fmt.Printf("gRPC server listening on port %d\n", port)
+	logger.Info(fmt.Sprintf("gRPC server listening on port %d\n", port))
 	if err := s.Serve(lis); err != nil {
 		return fmt.Errorf("failed to serve: %v", err)
 	}

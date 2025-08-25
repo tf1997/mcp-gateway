@@ -1,6 +1,6 @@
 port: ${MCP_GATEWAY_PORT:52350}
 rpcPort: ${MCP_GATEWAY_RPC_PORT:52354}
-clusterManger: ${MCP_GATEWAY_CLUSTER_MANGER:127.0.0.1:12040}
+clusterManager: ${MCP_GATEWAY_CLUSTER_MANAGER:127.0.0.1:12040}
 env: "${MCP_GATEWAY_ENV:dev}"
 pid: "${MCP_GATEWAY_PID:./mcp-gateway.pid}"
 reload_interval: ${MCP_GATEWAY_RELOAD_INTERVAL:100s}

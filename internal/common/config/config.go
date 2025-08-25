@@ -22,7 +22,7 @@ type (
 	MCPGatewayConfig struct {
 		Port           int              `yaml:"port"`
 		RPCPort        int              `yaml:"rpcPort"`
-		ClusterManger  string           `yaml:"clusterManger"`
+		ClusterManager string          `yaml:"clusterManager"`
 		Env            string           `yaml:"env"`
 		ReloadPort     int              `yaml:"reload_port"`
 		ReloadInterval time.Duration    `yaml:"reload_interval"`
