@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/exec"
 	"os/signal"
 	"syscall"
 	"time"
@@ -16,10 +17,10 @@ import (
 	"mcp-gateway/internal/mcp/storage"
 	pidHelper "mcp-gateway/pkg/helper"
 	"mcp-gateway/pkg/logger"
-	"mcp-gateway/pkg/utils"
-	"mcp-gateway/pkg/version"
 	"mcp-gateway/pkg/rpc/client"
 	RPCServer "mcp-gateway/pkg/rpc/server"
+	"mcp-gateway/pkg/utils"
+	"mcp-gateway/pkg/version"
 
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
@@ -68,6 +69,22 @@ var (
 			run()
 		},
 	}
+
+	installServiceCmd = &cobra.Command{
+		Use:   "install",
+		Short: "Install mcp-gateway as a systemd service",
+		Run: func(cmd *cobra.Command, args []string) {
+			installService()
+		},
+	}
+
+	uninstallServiceCmd = &cobra.Command{
+		Use:   "uninstall",
+		Short: "Uninstall mcp-gateway systemd service",
+		Run: func(cmd *cobra.Command, args []string) {
+			uninstallService()
+		},
+	}
 )
 
 func init() {
@@ -75,6 +92,119 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&pidFile, "pid", "", "path to PID file")
 	rootCmd.AddCommand(versionCmd)
 	rootCmd.AddCommand(reloadCmd)
+	rootCmd.AddCommand(installServiceCmd)
+	rootCmd.AddCommand(uninstallServiceCmd)
+}
+
+func installService() {
+	currentExecutable, err := os.Executable()
+	if err != nil {
+		fmt.Printf("Failed to get current executable path: %v\n", err)
+		os.Exit(1)
+	}
+
+	targetExecutablePath := "/usr/local/bin/mcp-gateway"
+
+	// Create /usr/local/bin if it doesn't exist (though it usually does)
+	if err := os.MkdirAll("/usr/local/bin", 0755); err != nil {
+		fmt.Printf("Failed to create /usr/local/bin: %v\n", err)
+		os.Exit(1)
+	}
+
+	// Move the current executable to the target path
+	fmt.Printf("Moving executable from %s to %s...\n", currentExecutable, targetExecutablePath)
+	if err := os.Rename(currentExecutable, targetExecutablePath); err != nil {
+		fmt.Printf("Failed to move executable: %v\n", err)
+		os.Exit(1)
+	}
+
+	// Create /etc/mcp-gateway if it doesn't exist
+	if err := os.MkdirAll("/etc/mcp-gateway", 0755); err != nil {
+		fmt.Printf("Failed to create /etc/mcp-gateway: %v\n", err)
+		os.Exit(1)
+	}
+
+	serviceContent := `[Unit]
+Description=MCP Gateway Service
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/usr/local/bin
+ExecStart=/usr/local/bin/mcp-gateway -c /etc/mcp-gateway/mcp-gateway.yaml
+Restart=on-failure
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=mcp-gateway
+
+[Install]
+WantedBy=multi-user.target
+`
+	serviceFilePath := "/etc/systemd/system/mcp-gateway.service"
+
+	fmt.Printf("Installing systemd service to %s...\n", serviceFilePath)
+	err = os.WriteFile(serviceFilePath, []byte(serviceContent), 0644)
+	if err != nil {
+		fmt.Printf("Failed to write service file: %v\n", err)
+		os.Exit(1)
+	}
+
+	fmt.Println("Reloading systemd daemon...")
+	cmd := exec.Command("systemctl", "daemon-reload")
+	if err := cmd.Run(); err != nil {
+		fmt.Printf("Failed to reload systemd daemon: %v\n", err)
+		os.Exit(1)
+	}
+
+	fmt.Println("Enabling mcp-gateway service...")
+	cmd = exec.Command("systemctl", "enable", "mcp-gateway") // Changed from := to =
+	if err := cmd.Run(); err != nil {
+		fmt.Printf("Failed to enable service: %v\n", err)
+		os.Exit(1)
+	}
+
+	fmt.Println("Starting mcp-gateway service...")
+	cmd = exec.Command("systemctl", "start", "mcp-gateway")
+	if err := cmd.Run(); err != nil {
+		fmt.Printf("Failed to start service: %v\n", err)
+		os.Exit(1)
+	}
+
+	fmt.Println("mcp-gateway service installed and started successfully.")
+}
+
+func uninstallService() {
+	serviceFilePath := "/etc/systemd/system/mcp-gateway.service"
+
+	fmt.Println("Stopping mcp-gateway service...")
+	cmd := exec.Command("systemctl", "stop", "mcp-gateway")
+	if err := cmd.Run(); err != nil {
+		fmt.Printf("Failed to stop service: %v\n", err)
+		// Don't exit, try to disable and remove anyway
+	}
+
+	fmt.Println("Disabling mcp-gateway service...")
+	cmd = exec.Command("systemctl", "disable", "mcp-gateway") // Changed from := to =
+	if err := cmd.Run(); err != nil {
+		fmt.Printf("Failed to disable service: %v\n", err)
+		// Don't exit, try to remove anyway
+	}
+
+	fmt.Printf("Removing service file %s...\n", serviceFilePath)
+	if err := os.Remove(serviceFilePath); err != nil {
+		fmt.Printf("Failed to remove service file: %v\n", err)
+		os.Exit(1)
+	}
+
+	fmt.Println("Reloading systemd daemon...")
+	cmd = exec.Command("systemctl", "daemon-reload") // Changed from := to =
+	if err := cmd.Run(); err != nil {
+		fmt.Printf("Failed to reload systemd daemon: %v\n", err)
+		os.Exit(1)
+	}
+
+	fmt.Println("mcp-gateway service uninstalled successfully.")
 }
 
 func run() {
@@ -142,17 +272,6 @@ func run() {
 		logger.Info("gRPC server enabled, start to intializing...", zap.Int("rpc_port", cfg.RPCPort))
 		go RPCServer.Start(cfg.RPCPort, logger, server)
 	}
-
-	// ntf, err := notifier.NewNotifier(ctx, logger, &cfg.Notifier)
-	// if err != nil {
-	// 	logger.Fatal("failed to initialize notifier",
-	// 		zap.Error(err))
-	// }
-	// updateCh, err := ntf.Watch(ctx)
-	// if err != nil {
-	// 	logger.Fatal("failed to start watching for updates",
-	// 		zap.Error(err))
-	// }
 
 	server.Start()
 
