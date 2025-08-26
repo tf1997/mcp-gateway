@@ -117,10 +117,19 @@ func LoadConfig[T Type](filename string) (*T, string, error) {
 		return nil, cfgPath, err
 	}
 
-	// Validate durations after unmarshalling
+	// Validate durations and set defaults after unmarshalling
 	if mcpCfg, ok := any(&cfg).(*MCPGatewayConfig); ok {
 		if mcpCfg.ReloadInterval <= time.Second {
 			mcpCfg.ReloadInterval = 600 * time.Second
+		}
+
+		// Set default Disk.Path for Linux if not specified
+		if mcpCfg.Storage.Type == "disk" && mcpCfg.Storage.Disk.Path == "" {
+			if os.Getenv("GOOS") == "linux" || (os.Getenv("GOOS") == "" && helper.IsLinux()) { // Check if running on Linux
+				mcpCfg.Storage.Disk.Path = "/etc/mcp-gateway"
+			} else {
+				mcpCfg.Storage.Disk.Path = "./data" // Default for other OS or if not explicitly Linux
+			}
 		}
 	}
 
