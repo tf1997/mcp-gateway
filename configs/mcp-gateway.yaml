@@ -6,6 +6,10 @@ pid: "${MCP_GATEWAY_PID:./mcp-gateway.pid}"
 reload_interval: ${MCP_GATEWAY_RELOAD_INTERVAL:100s}
 reload_switch: ${MCP_GATEWAY_RELOAD_SWITCH:true}
 
+kafka:
+  brokers: [127.0.0.1:9092]  # List of Kafka brokers
+  topic: ""  # Kafka topic for logging
+
 # Logger configuration
 logger:
   level: "${LOGGER_LEVEL:info}"                                           # debug, info, warn, error
@@ -67,7 +71,7 @@ notifier:
 
 # Session storage configuration
 session:
-  type: "${SESSION_STORAGE_TYPE:memory}"  # memory or redis
+  type: "${SESSION_STORAGE_TYPE:kafka}"  # memory, redis or kafka
   redis:
     cluster_type: "${SESSION_REDIS_CLUSTER_TYPE:single}"
     addr: "${SESSION_REDIS_ADDR:localhost:6379}"
@@ -78,6 +82,10 @@ session:
     topic: "${SESSION_REDIS_TOPIC:mcp-gateway:session}"
     prefix: "${SESSION_REDIS_PREFIX:session}"
     ttl: "${SESSION_REDIS_TTL:24h}"  # Session TTL in Redis
+  kafka:
+    brokers: ["${SESSION_KAFKA_BROKERS:localhost:9092}"] # List of Kafka brokers
+    topic_prefix: "${SESSION_KAFKA_TOPIC_PREFIX:mcp-session}" # Prefix for Kafka topics
+    timeout: "${SESSION_KAFKA_TIMEOUT:5s}" # Timeout for Kafka operations
 
 # OAuth2 configuration
 auth:
@@ -109,8 +117,3 @@ auth:
       - "Mcp-Session-Id"
       - "mcp-protocol-version"
     allowCredentials: true
-
-mcp:
-  kafka:
-    brokers: [127.0.0.1:9092]  # List of Kafka brokers
-    topic: ""  # Kafka topic for logging

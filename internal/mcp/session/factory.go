@@ -17,6 +17,8 @@ const (
 	TypeMemory Type = "memory"
 	// TypeRedis represents Redis-based session store
 	TypeRedis Type = "redis"
+	// TypeKafka represents Kafka-based session store
+	TypeKafka Type = "kafka"
 )
 
 // NewStore creates a new session store based on configuration
@@ -27,6 +29,8 @@ func NewStore(logger *zap.Logger, kafkaProducer *kafka.KafkaProducer, cfg *confi
 		return NewMemoryStore(logger, kafkaProducer, nodeIP), nil
 	case TypeRedis:
 		return NewRedisStore(logger, kafkaProducer, cfg.Redis, nodeIP)
+	case TypeKafka:
+		return NewKafkaStore(logger, kafkaProducer, &cfg.Kafka, nodeIP)
 	default:
 		return nil, fmt.Errorf("unsupported session store type: %s", cfg.Type)
 	}

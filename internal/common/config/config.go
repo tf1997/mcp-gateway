@@ -20,27 +20,33 @@ type (
 
 	// MCPGatewayConfig represents the MCP gateway configuration
 	MCPGatewayConfig struct {
-		Port           int              `yaml:"port"`
-		RPCPort        int              `yaml:"rpcPort"`
-		ClusterManager string          `yaml:"clusterManager"`
-		Env            string           `yaml:"env"`
-		ReloadPort     int              `yaml:"reload_port"`
-		ReloadInterval time.Duration    `yaml:"reload_interval"`
-		ReloadSwitch   bool             `yaml:"reload_switch"`
-		PID            string           `yaml:"pid"`
-		SuperAdmin     SuperAdminConfig `yaml:"super_admin"`
-		Logger         LoggerConfig     `yaml:"logger"`
-		Storage        StorageConfig    `yaml:"storage"`
-		Notifier       NotifierConfig   `yaml:"notifier"`
-		Session        SessionConfig    `yaml:"session"`
-		Auth           AuthConfig       `yaml:"auth"`
-		MCP            MCPConfig        `yaml:"mcp"` // Add MCPConfig
+		Port           int                 `yaml:"port"`
+		RPCPort        int                 `yaml:"rpcPort"`
+		ClusterManager string              `yaml:"clusterManager"`
+		Env            string              `yaml:"env"`
+		ReloadPort     int                 `yaml:"reload_port"`
+		ReloadInterval time.Duration       `yaml:"reload_interval"`
+		ReloadSwitch   bool                `yaml:"reload_switch"`
+		PID            string              `yaml:"pid"`
+		SuperAdmin     SuperAdminConfig    `yaml:"super_admin"`
+		Logger         LoggerConfig        `yaml:"logger"`
+		Storage        StorageConfig       `yaml:"storage"`
+		Notifier       NotifierConfig      `yaml:"notifier"`
+		Session        SessionConfig       `yaml:"session"`
+		Auth           AuthConfig          `yaml:"auth"`
+		MCP            MCPConfig           `yaml:"mcp"` // Add MCPConfig
+		Kafka          KafkaConfig `json:"kafka,omitempty" yaml:"kafka,omitempty"`
+	}
+	KafkaConfig struct {
+		Brokers []string `yaml:"brokers"`
+		Topic   string   `yaml:"topic"`
 	}
 
 	// SessionConfig represents the session storage configuration
 	SessionConfig struct {
-		Type  string             `yaml:"type"`  // "memory" or "redis"
+		Type  string             `yaml:"type"`  // "memory", "redis" or "kafka"
 		Redis SessionRedisConfig `yaml:"redis"` // Redis configuration
+		Kafka SessionKafkaConfig `yaml:"kafka"` // Kafka configuration
 	}
 
 	// SessionRedisConfig represents the Redis configuration for session storage
@@ -54,6 +60,12 @@ type (
 		Topic       string        `yaml:"topic"`
 		Prefix      string        `yaml:"prefix"`
 		TTL         time.Duration `yaml:"ttl"` // TTL for session data in Redis
+	}
+
+	SessionKafkaConfig struct {
+		Brokers     []string      `yaml:"brokers"`      // Kafka broker addresses
+		TopicPrefix string        `yaml:"topic_prefix"` // Prefix for Kafka topics
+		Timeout     time.Duration `yaml:"timeout"`      // Timeout for Kafka operations
 	}
 
 	// LoggerConfig represents the logger configuration

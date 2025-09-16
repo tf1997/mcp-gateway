@@ -19,23 +19,17 @@ type (
 	}
 
 	MCPConfig struct {
-		Name       string            `json:"name" yaml:"name"`
-		AppCode    string            `json:"appCode" yaml:"appCode"`
-		CreatedAt  time.Time         `json:"createdAt" yaml:"createdAt"`
-		UpdatedAt  time.Time         `json:"updatedAt" yaml:"updatedAt"`
-		DeletedAt  time.Time         `json:"deletedAt,omitempty" yaml:"deletedAt,omitempty"` // non-zero indicates that all information has been deleted
-		Status     bool              `json:"status" yaml:"status"`                           // true if the MCP server is active, false if it is deleted
-		Routers    []RouterConfig    `json:"routers,omitempty" yaml:"routers,omitempty"`
-		Servers    []ServerConfig    `json:"servers,omitempty" yaml:"servers,omitempty"`
-		Tools      []ToolConfig      `json:"tools,omitempty" yaml:"tools,omitempty"`
-		Prompts    []PromptConfig    `json:"prompts,omitempty" yaml:"prompts,omitempty"`
-		McpServers []MCPServerConfig `json:"mcpServers,omitempty" yaml:"mcpServers,omitempty"` // proxy mcp servers
-		Kafka      *KafkaConfig      `json:"kafka,omitempty" yaml:"kafka,omitempty"`
-	}
-
-	KafkaConfig struct {
-		Brokers []string `json:"brokers" yaml:"brokers"`
-		Topic   string   `json:"topic" yaml:"topic"`
+		Name       string              `json:"name" yaml:"name"`
+		AppCode    string              `json:"appCode" yaml:"appCode"`
+		CreatedAt  time.Time           `json:"createdAt" yaml:"createdAt"`
+		UpdatedAt  time.Time           `json:"updatedAt" yaml:"updatedAt"`
+		DeletedAt  time.Time           `json:"deletedAt,omitempty" yaml:"deletedAt,omitempty"` // non-zero indicates that all information has been deleted
+		Status     bool                `json:"status" yaml:"status"`                           // true if the MCP server is active, false if it is deleted
+		Routers    []RouterConfig      `json:"routers,omitempty" yaml:"routers,omitempty"`
+		Servers    []ServerConfig      `json:"servers,omitempty" yaml:"servers,omitempty"`
+		Tools      []ToolConfig        `json:"tools,omitempty" yaml:"tools,omitempty"`
+		Prompts    []PromptConfig      `json:"prompts,omitempty" yaml:"prompts,omitempty"`
+		McpServers []MCPServerConfig   `json:"mcpServers,omitempty" yaml:"mcpServers,omitempty"` // proxy mcp servers
 	}
 
 	RouterConfig struct {

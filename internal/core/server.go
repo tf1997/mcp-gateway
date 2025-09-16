@@ -50,7 +50,7 @@ type (
 )
 
 // NewServer creates a new MCP server
-func NewServer(logger *zap.Logger, port int, store storage.Store, sessionStore session.Store, a auth.Auth, mcpConfig *config.MCPConfig, sessionConfig *config.SessionConfig) (*Server, error) {
+func NewServer(logger *zap.Logger, port int, store storage.Store, sessionStore session.Store, a auth.Auth, sessionConfig *config.SessionConfig, kafkaConfig *config.KafkaConfig) (*Server, error) {
 	nodeIP := utils.GetLocalIP() // Get node IP here
 
 	s := &Server{
@@ -68,14 +68,14 @@ func NewServer(logger *zap.Logger, port int, store storage.Store, sessionStore s
 
 	logger.Info("Concurrent node IP", zap.String("node_ip", s.nodeIP))
 
-	if mcpConfig != nil && mcpConfig.Kafka != nil && len(mcpConfig.Kafka.Brokers) > 0 { // Removed Topic check
+	if kafkaConfig != nil && len(kafkaConfig.Brokers) > 0 { // Removed Topic check
 		s.kafkaProducer = kafka.NewKafkaProducer(
 			&kafka.ProducerConfig{
-				Brokers: mcpConfig.Kafka.Brokers,
+				Brokers: kafkaConfig.Brokers,
 			},
 			logger,
 		)
-		logger.Info("Kafka producer initialized", zap.Strings("brokers", mcpConfig.Kafka.Brokers)) // Removed topic from log
+		logger.Info("Kafka producer initialized", zap.Strings("brokers", kafkaConfig.Brokers)) // Removed topic from log
 	} else {
 		logger.Info("Kafka configuration not found or incomplete, Kafka producer not initialized")
 	}
