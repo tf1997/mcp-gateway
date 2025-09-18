@@ -3,14 +3,15 @@ package core
 import (
 	"bytes"   // Add bytes import
 	"context" // Add context import
-	"io"      // Add io import
+	"encoding/json"
+	"io" // Add io import
 	"net/http"
 	"runtime"
 	"strings"
 	"time"
 
-	"mcp-gateway/internal/common/config"
 	"mcp-gateway/internal/common/cnst"
+	"mcp-gateway/internal/common/config"
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
@@ -108,17 +109,17 @@ func (s *Server) loggerMiddleware() gin.HandlerFunc {
 
 		// Extract session ID if present (for SSE connections)
 		sessionID := c.Query("sessionId")
-		if sessionID == "" && strings.HasSuffix(path, "/sse") {
-			// For initial SSE connection, session ID is generated later.
-			// We can't get it here reliably for the initial request.
-			// It will be added to the SSE event logs.
+		if sessionID == "" {
+			sessionID = c.GetHeader("Mcp-Session-Id")
 		}
 
 		// Extract consumer token using the generic method
 		consumerToken := s.getConsumerToken(c)
 
+		// Convert headers to JSON string
+		headersJSON, _ := json.Marshal(headers)
+
 		// Prepare log entry for Kafka
-		//日志增加请求开始和请求结束时间，命名为startTime endTime
 		logEntry := map[string]any{
 			"log_type":           "http_request", // Distinguish from SSE event logs
 			"timestamp":          time.Now().Format(time.RFC3339),
@@ -134,11 +135,11 @@ func (s *Server) loggerMiddleware() gin.HandlerFunc {
 			"latency_ms":         latency.Milliseconds(),
 			"client_ip":          clientIP,
 			"response_size":      responseSize,
-			"headers":            headers, // Include headers in Kafka log
+			"headers":            string(headersJSON), // Include headers in Kafka log
 			"request_body":       string(requestBody), // Include request body in Kafka log
 			"response_body":      responseBody,        // Include response body in Kafka log
-			"success":            success, // Add success status
-			"node_ip":            s.nodeIP,  // Add node IP
+			"success":            success,             // Add success status
+			"node_ip":            s.nodeIP,            // Add node IP
 		}
 
 		// Add session_id and consumer_token if available

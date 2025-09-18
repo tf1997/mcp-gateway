@@ -7,7 +7,7 @@ const (
 
 // Kafka topics
 const (
-	KafkaTopicHttpRequest  = "mcp-gateway-http-logs"
-	KafkaTopicSseEvent     = "mcp-gateway-sse-events-log"
-	KafkaTopicSessionEvent = "mcp-gateway-session-events" // New Kafka topic for session events
+	KafkaTopicHttpRequest  = "mcp_gateway_http_logs"
+	KafkaTopicSseEvent     = "mcp_gateway_sse_events_log"
+	KafkaTopicSessionEvent = "mcp_gateway_session_events" // New Kafka topic for session events
 )
