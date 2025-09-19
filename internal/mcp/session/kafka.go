@@ -54,6 +54,7 @@ func (c *KafkaConnection) EventQueue() <-chan *Message {
 func (c *KafkaConnection) Send(ctx context.Context, msg *Message) error {
 	// Prepare log entry for Kafka
 	if c.producer != nil { // Assuming this producer is for general logs, not session-specific messages
+		queryJson, _ := json.Marshal(c.meta.Request.Query)
 		logEntry := map[string]any{
 			"log_type":           "sse_event",
 			"timestamp":          time.Now().Format(time.RFC3339),
@@ -65,7 +66,7 @@ func (c *KafkaConnection) Send(ctx context.Context, msg *Message) error {
 			"event_data":         string(msg.Data),
 			"method":             c.meta.Request.Headers["Method"],
 			"path":               c.meta.Prefix,
-			"query":              c.meta.Request.Query,
+			"query":              string(queryJson),
 			"remote_addr":        c.meta.Request.Headers["X-Forwarded-For"],
 			"user_agent":         c.meta.Request.Headers["User-Agent"],
 			"service_identifier": c.meta.Prefix,

@@ -2,6 +2,7 @@ package session
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"sync"
 	"time" // Add time import
@@ -124,18 +125,19 @@ func (c *MemoryConnection) EventQueue() <-chan *Message {
 func (c *MemoryConnection) Send(ctx context.Context, msg *Message) error {
 	// Prepare log entry for Kafka
 	if c.kafkaProducer != nil {
-		logEntry := map[string]interface{}{
+		queryJson, _ := json.Marshal(c.meta.Request.Query)
+		logEntry := map[string]any{
 			"log_type":           "sse_event",
 			"timestamp":          time.Now().Format(time.RFC3339),
 			"startTime":          time.Now().Format(time.DateTime),
-			"endTime":            time.Now().Format(time.DateTime), 
+			"endTime":            time.Now().Format(time.DateTime),
 			"session_id":         c.meta.ID,
 			"consumer_token":     c.meta.ConsumerToken,
 			"event_type":         msg.Event,
 			"event_data":         string(msg.Data),
 			"method":             c.meta.Request.Headers["Method"], // Assuming Method is stored in Headers
 			"path":               c.meta.Prefix,                    // Using Prefix as path for SSE events
-			"query":              c.meta.Request.Query,
+			"query":              string(queryJson),
 			"remote_addr":        c.meta.Request.Headers["X-Forwarded-For"], // Assuming X-Forwarded-For for remote_addr
 			"user_agent":         c.meta.Request.Headers["User-Agent"],      // Assuming User-Agent in Headers
 			"service_identifier": c.meta.Prefix,

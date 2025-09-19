@@ -347,6 +347,7 @@ func (c *RedisConnection) EventQueue() <-chan *Message {
 func (c *RedisConnection) Send(ctx context.Context, msg *Message) error {
 	// Prepare log entry for Kafka
 	if c.kafkaProducer != nil {
+		queryJson, _ := json.Marshal(c.meta.Request.Query)
 		logEntry := map[string]any{
 			"log_type":           "sse_event",
 			"timestamp":          time.Now().Format(time.RFC3339),
@@ -358,7 +359,7 @@ func (c *RedisConnection) Send(ctx context.Context, msg *Message) error {
 			"event_data":         string(msg.Data),
 			"method":             c.meta.Request.Headers["Method"], // Assuming Method is stored in Headers
 			"path":               c.meta.Prefix,                    // Using Prefix as path for SSE events
-			"query":              c.meta.Request.Query,
+			"query":              string(queryJson),
 			"remote_addr":        c.meta.Request.Headers["X-Forwarded-For"], // Assuming X-Forwarded-For for remote_addr
 			"user_agent":         c.meta.Request.Headers["User-Agent"],      // Assuming User-Agent in Headers
 			"service_identifier": c.meta.Prefix,
