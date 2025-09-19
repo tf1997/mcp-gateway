@@ -34,7 +34,6 @@ type (
 		Notifier       NotifierConfig      `yaml:"notifier"`
 		Session        SessionConfig       `yaml:"session"`
 		Auth           AuthConfig          `yaml:"auth"`
-		MCP            MCPConfig           `yaml:"mcp"` // Add MCPConfig
 		Kafka          KafkaConfig `json:"kafka,omitempty" yaml:"kafka,omitempty"`
 	}
 	KafkaConfig struct {

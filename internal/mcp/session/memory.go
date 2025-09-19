@@ -49,6 +49,7 @@ func (s *MemoryStore) Register(_ context.Context, meta *Meta) (Connection, error
 		queue:         make(chan *Message, 100),
 		kafkaProducer: s.kafkaProducer, // Pass Kafka producer to connection
 		nodeIP:        s.nodeIP,        // Pass node IP to connection
+		logger:        s.logger,
 	}
 
 	// Store connection
