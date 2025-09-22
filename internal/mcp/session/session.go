@@ -13,9 +13,10 @@ type Message struct {
 
 // RequestInfo holds information about the request that created the session.
 type RequestInfo struct {
-	Headers map[string]string `json:"headers"`
-	Query   map[string]string `json:"query"`
-	Cookies map[string]string `json:"cookies"`
+	Headers  map[string]string `json:"headers"`
+	Query    map[string]string `json:"query"`
+	Cookies  map[string]string `json:"cookies"`
+	ClientIP string            `json:"client_ip"`
 }
 
 // Meta holds immutable metadata about a session.

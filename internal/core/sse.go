@@ -35,6 +35,7 @@ func (s *Server) handleSSE(c *gin.Context) {
 		Headers: make(map[string]string),
 		Query:   make(map[string]string),
 		Cookies: make(map[string]string),
+		ClientIP: c.ClientIP(),
 	}
 	// Process request headers
 	for k, v := range c.Request.Header {
