@@ -9,6 +9,7 @@ import (
 
 	"mcp-gateway/internal/common/cnst"
 	"mcp-gateway/pkg/kafka"
+	"mcp-gateway/pkg/mcp"
 )
 
 // sendSseEventLog sends an SSE event log to Kafka.
@@ -35,6 +36,11 @@ func sendSseEventLog(ctx context.Context, meta *Meta, msg *Message, kafkaProduce
 		"service_identifier": meta.Prefix,
 		"node_ip":            nodeIP,
 		"client_ip":          meta.Request.ClientIP,
+	}
+
+	var jsonRPCResponse mcp.JSONRPCResponse
+	if len(msg.Data) > 0 && json.Unmarshal(msg.Data, &jsonRPCResponse) == nil && jsonRPCResponse.ID != nil {
+		logEntry["jsonrpc_id"] = jsonRPCResponse.ID
 	}
 
 	go func() {

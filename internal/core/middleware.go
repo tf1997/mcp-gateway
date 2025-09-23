@@ -12,6 +12,7 @@ import (
 
 	"mcp-gateway/internal/common/cnst"
 	"mcp-gateway/internal/common/config"
+	"mcp-gateway/pkg/mcp"
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
@@ -148,6 +149,16 @@ func (s *Server) loggerMiddleware() gin.HandlerFunc {
 		}
 		if consumerToken != "" {
 			logEntry["consumer_token"] = consumerToken
+		}
+
+		// If requestBody is not empty and can be converted to mcp.JSONRPCRequest,
+		// extract the method value and put it into logEntry.
+		var jsonRPCRequest mcp.JSONRPCRequest
+		if len(requestBody) > 0 && json.Unmarshal(requestBody, &jsonRPCRequest) == nil {
+			logEntry["jsonrpc_method"] = jsonRPCRequest.Method
+			if jsonRPCRequest.Id != nil {
+				logEntry["jsonrpc_id"] = jsonRPCRequest.Id
+			}
 		}
 
 		// Send log to Kafka if producer is initialized
